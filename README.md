@@ -1,3 +1,20 @@
+# AutoRuntime
+
+## Upstream and Attribution
+
+AutoRuntime is a deep derivative of
+[eclipse-ecal/tcp_pubsub](https://github.com/eclipse-ecal/tcp_pubsub), pinned at
+1540876ee8aad623a9b089baaf3f948579b466d9 and distributed under MIT. The
+original history, LICENSE, Continental copyright, and portable_endian.h notice
+are preserved.
+
+The baseline supplies an Asio TCP binary pub/sub transport, failover, and its
+build/tests. AutoRuntime is redesigning the runtime API, executor, queue
+semantics, transport boundary, health/recovery, observability, distributed
+extension, and verification. docs/upstream-analysis.md records the boundary.
+
+The remainder is the imported upstream README. It describes the baseline, not
+yet every target capability.
 [![Windows](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-windows.yml/badge.svg)](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-windows.yml) [![Ubuntu](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-ubuntu.yml/badge.svg)](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-ubuntu.yml) [![macOS](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-macos.yml/badge.svg)](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-macos.yml)
 
 # tcp_pubsub - TCP Publish/Subscribe library
