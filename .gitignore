@@ -42,5 +42,6 @@ CMakeLists.txt.user
 .vscode
 
 #Build dir
+/build*/
 /_build
 /samples/integration_test/_build
