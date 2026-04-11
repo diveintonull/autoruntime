@@ -54,6 +54,7 @@ endif()
 add_library(autoruntime STATIC
   scheduler/src/executor.cpp
   runtime/src/node.cpp
+  health/src/health_monitor.cpp
   transport/src/in_memory_transport.cpp)
 add_library(AutoRuntime::autoruntime ALIAS autoruntime)
 target_compile_features(autoruntime PUBLIC cxx_std_20)
@@ -98,6 +99,14 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     PRIVATE AutoRuntime::autoruntime Threads::Threads)
   autoruntime_enable_warnings(autoruntime_runtime_api_test)
   add_test(NAME autoruntime.runtime_api COMMAND autoruntime_runtime_api_test)
+
+  add_executable(autoruntime_health_monitor_test
+    tests/health_monitor_test.cpp)
+  target_link_libraries(autoruntime_health_monitor_test
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  autoruntime_enable_warnings(autoruntime_health_monitor_test)
+  add_test(NAME autoruntime.health_monitor
+    COMMAND autoruntime_health_monitor_test)
 
   if(AUTORUNTIME_ENABLE_FASTIPC)
     add_executable(autoruntime_fastipc_transport_test

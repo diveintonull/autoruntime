@@ -17,6 +17,7 @@ enum class StatusCode {
   QueueFull,
   Dropped,
   Cancelled,
+  StaleGeneration,
   TransportError,
   Unsupported,
   Internal,
