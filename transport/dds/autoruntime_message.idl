@@ -1,0 +1,15 @@
+module autoruntime_dds {
+  @final
+  struct Message {
+    unsigned short envelope_version;
+    unsigned long long trace_id;
+    unsigned long long span_id;
+    unsigned long long parent_span_id;
+    unsigned long long message_sequence;
+    unsigned long long source_timestamp_ns;
+    unsigned long long publish_timestamp_ns;
+    unsigned long long source_generation;
+    long priority;
+    sequence<octet, 1048576> payload;
+  };
+};

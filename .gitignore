@@ -45,3 +45,6 @@ CMakeLists.txt.user
 /build*/
 /_build
 /samples/integration_test/_build
+
+# Reproducibly bootstrapped external dependencies
+/.deps/

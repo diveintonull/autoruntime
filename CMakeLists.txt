@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(AutoRuntime VERSION 0.1.0 LANGUAGES CXX)
+project(AutoRuntime VERSION 0.1.0 LANGUAGES C CXX)
 
 include(CTest)
 find_package(Threads REQUIRED)
@@ -7,6 +7,10 @@ find_package(Threads REQUIRED)
 option(AUTORUNTIME_BUILD_TESTS "Build AutoRuntime tests" ON)
 option(AUTORUNTIME_BUILD_BENCHMARKS "Build AutoRuntime benchmarks" ON)
 option(AUTORUNTIME_ENABLE_FASTIPC "Build the FastIPC transport adapter" ON)
+option(AUTORUNTIME_ENABLE_DDS "Build the Cyclone DDS transport adapter" ON)
+set(AUTORUNTIME_CYCLONEDDS_ROOT
+    "${CMAKE_CURRENT_SOURCE_DIR}/.deps/cyclonedds-11.0.1"
+    CACHE PATH "Cyclone DDS 11.0.1 installation prefix")
 option(AUTORUNTIME_BUILD_TCP_BASELINE
        "Build the imported tcp_pubsub baseline target" OFF)
 
@@ -33,6 +37,18 @@ if(AUTORUNTIME_ENABLE_FASTIPC)
   add_subdirectory(
     "${CMAKE_CURRENT_SOURCE_DIR}/../fastipc"
     "${CMAKE_BINARY_DIR}/fastipc" EXCLUDE_FROM_ALL)
+endif()
+
+if(AUTORUNTIME_ENABLE_DDS)
+  list(PREPEND CMAKE_PROGRAM_PATH
+    "${AUTORUNTIME_CYCLONEDDS_ROOT}/bin")
+  find_package(CycloneDDS 11.0.1 CONFIG REQUIRED
+    PATHS "${AUTORUNTIME_CYCLONEDDS_ROOT}"
+    NO_DEFAULT_PATH)
+  idlc_generate(
+    TARGET autoruntime_dds_types
+    FILES "${CMAKE_CURRENT_SOURCE_DIR}/transport/dds/autoruntime_message.idl"
+    WARNINGS no-implicit-extensibility)
 endif()
 
 add_library(autoruntime STATIC
@@ -63,6 +79,13 @@ if(AUTORUNTIME_ENABLE_FASTIPC)
   target_compile_definitions(autoruntime PUBLIC AUTORUNTIME_HAS_FASTIPC=1)
 endif()
 
+if(AUTORUNTIME_ENABLE_DDS)
+  target_sources(autoruntime PRIVATE transport/src/dds_transport.cpp)
+  target_link_libraries(
+    autoruntime PRIVATE autoruntime_dds_types CycloneDDS::ddsc)
+  target_compile_definitions(autoruntime PUBLIC AUTORUNTIME_HAS_DDS=1)
+endif()
+
 if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
   add_executable(autoruntime_executor_test tests/executor_test.cpp)
   target_link_libraries(autoruntime_executor_test
@@ -84,5 +107,16 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     autoruntime_enable_warnings(autoruntime_fastipc_transport_test)
     add_test(NAME autoruntime.fastipc_transport
       COMMAND autoruntime_fastipc_transport_test)
+  endif()
+
+  if(AUTORUNTIME_ENABLE_DDS)
+    add_executable(autoruntime_dds_transport_test
+      tests/dds_transport_test.cpp)
+    target_link_libraries(autoruntime_dds_transport_test
+      PRIVATE AutoRuntime::autoruntime Threads::Threads)
+    autoruntime_enable_warnings(autoruntime_dds_transport_test)
+    add_test(NAME autoruntime.dds_transport
+      COMMAND autoruntime_dds_transport_test)
+    set_tests_properties(autoruntime.dds_transport PROPERTIES TIMEOUT 20)
   endif()
 endif()
