@@ -1,0 +1,49 @@
+{
+  "cyclonedds_version": "11.0.1",
+  "message_bytes": 128,
+  "discovery_warmup_ms": 750,
+  "scenarios": [
+    {
+      "name": "reliable_matched",
+      "writer_reliability": "Reliable",
+      "reader_reliability": "Reliable",
+      "attempted": 5000,
+      "published": 5000,
+      "received": 5000,
+      "loss_percent": 0.000,
+      "send_rate_messages_per_second": 682864.858,
+      "latency_samples": 5000,
+      "p50_latency_us": 683.289,
+      "p95_latency_us": 1074.968,
+      "p99_latency_us": 1118.266
+    },
+    {
+      "name": "best_effort_matched",
+      "writer_reliability": "BestEffort",
+      "reader_reliability": "BestEffort",
+      "attempted": 5000,
+      "published": 5000,
+      "received": 5000,
+      "loss_percent": 0.000,
+      "send_rate_messages_per_second": 853467.776,
+      "latency_samples": 5000,
+      "p50_latency_us": 985.819,
+      "p95_latency_us": 1122.428,
+      "p99_latency_us": 1135.278
+    },
+    {
+      "name": "best_effort_writer_reliable_reader",
+      "writer_reliability": "BestEffort",
+      "reader_reliability": "Reliable",
+      "attempted": 500,
+      "published": 500,
+      "received": 0,
+      "loss_percent": 100.000,
+      "send_rate_messages_per_second": 2215094.540,
+      "latency_samples": 0,
+      "p50_latency_us": 0.000,
+      "p95_latency_us": 0.000,
+      "p99_latency_us": 0.000
+    }
+  ]
+}

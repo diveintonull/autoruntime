@@ -120,3 +120,11 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     set_tests_properties(autoruntime.dds_transport PROPERTIES TIMEOUT 20)
   endif()
 endif()
+
+if(AUTORUNTIME_BUILD_BENCHMARKS AND AUTORUNTIME_ENABLE_DDS)
+  add_executable(autoruntime_dds_qos_experiment
+    benchmarks/dds_qos_experiment.cpp)
+  target_link_libraries(autoruntime_dds_qos_experiment
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  autoruntime_enable_warnings(autoruntime_dds_qos_experiment)
+endif()
