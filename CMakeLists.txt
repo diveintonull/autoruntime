@@ -55,6 +55,7 @@ add_library(autoruntime STATIC
   scheduler/src/executor.cpp
   runtime/src/node.cpp
   health/src/health_monitor.cpp
+  observability/src/observability.cpp
   transport/src/in_memory_transport.cpp)
 add_library(AutoRuntime::autoruntime ALIAS autoruntime)
 target_compile_features(autoruntime PUBLIC cxx_std_20)
@@ -107,6 +108,14 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
   autoruntime_enable_warnings(autoruntime_health_monitor_test)
   add_test(NAME autoruntime.health_monitor
     COMMAND autoruntime_health_monitor_test)
+
+  add_executable(autoruntime_observability_test
+    tests/observability_test.cpp)
+  target_link_libraries(autoruntime_observability_test
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  autoruntime_enable_warnings(autoruntime_observability_test)
+  add_test(NAME autoruntime.observability
+    COMMAND autoruntime_observability_test)
 
   if(AUTORUNTIME_ENABLE_FASTIPC)
     add_executable(autoruntime_fastipc_transport_test
