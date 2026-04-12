@@ -68,6 +68,16 @@ target_include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/health/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/observability/include")
 
+if(UNIX)
+  target_sources(autoruntime PRIVATE
+    distributed/src/discovery.cpp
+    distributed/src/rpc.cpp)
+  target_include_directories(autoruntime PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/distributed/include")
+  target_compile_definitions(autoruntime PUBLIC
+    AUTORUNTIME_HAS_DISTRIBUTED=1)
+endif()
+
 function(autoruntime_enable_warnings target)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(${target} PRIVATE
@@ -136,6 +146,17 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     add_test(NAME autoruntime.dds_transport
       COMMAND autoruntime_dds_transport_test)
     set_tests_properties(autoruntime.dds_transport PROPERTIES TIMEOUT 20)
+  endif()
+
+  if(UNIX)
+    add_executable(autoruntime_distributed_test
+      tests/distributed_test.cpp)
+    target_link_libraries(autoruntime_distributed_test
+      PRIVATE AutoRuntime::autoruntime Threads::Threads)
+    autoruntime_enable_warnings(autoruntime_distributed_test)
+    add_test(NAME autoruntime.distributed
+      COMMAND autoruntime_distributed_test)
+    set_tests_properties(autoruntime.distributed PROPERTIES TIMEOUT 20)
   endif()
 endif()
 
