@@ -1,0 +1,19 @@
+{
+  "benchmark": "sensor_planning_control",
+  "transport": "InMemoryTransport",
+  "message_count": 5000,
+  "payload_bytes": 256,
+  "completed": 5000,
+  "duration_seconds": 0.065,
+  "throughput_messages_per_second": 76415.820,
+  "trace_spans": 15000,
+  "trace_failures": 0,
+  "publish_failures": 0,
+  "e2e_latency": {"count":5000,"sampled_count":5000,"min_us":83.346,"max_us":63314.081,"mean_us":26111.619,"p50_us":19985.642,"p95_us":60932.585,"p99_us":62846.876},
+  "process": {"available":true,"user_seconds":0.056,"system_seconds":0.030,"maximum_resident_bytes":11460608,"voluntary_context_switches":5099,"involuntary_context_switches":0},
+  "metrics_snapshot": {"captured_monotonic_ns":27699248044778,"metrics":[{"name":"control.dropped_messages","kind":"counter","value":0},{"name":"control.queue_high_watermark","kind":"gauge","value":905},{"name":"executor.callback_execution_us","kind":"histogram","count":8192,"sampled_count":8192,"min":1.195,"max":2098.562,"mean":12.8839481201172,"p50":5.846,"p95":32.745,"p99":179.176},{"name":"executor.callback_failures","kind":"counter","value":0},{"name":"executor.deadline_misses","kind":"counter","value":0},{"name":"executor.finished","kind":"counter","value":10000},{"name":"executor.queue_delay_us","kind":"histogram","count":8192,"sampled_count":8192,"min":0.13,"max":140.534,"mean":1.07584875488281,"p50":0.172,"p95":3.31,"p99":4.728},{"name":"executor.queue_overflows","kind":"counter","value":0},{"name":"executor.release_lateness_us","kind":"histogram","count":8192,"sampled_count":8192,"min":0.034,"max":9.847,"mean":0.0472344970703123,"p50":0.041,"p95":0.08,"p99":0.134},{"name":"executor.releases","kind":"counter","value":10000},{"name":"executor.response_time_us","kind":"histogram","count":8192,"sampled_count":8192,"min":1.395,"max":2098.759,"mean":14.0070313720703,"p50":6.575,"p95":36.243,"p99":182.463},{"name":"executor.started","kind":"counter","value":10000},{"name":"node.control.state_running","kind":"gauge","value":1},{"name":"node.planning.state_running","kind":"gauge","value":1},{"name":"node.sensor.state_running","kind":"gauge","value":1},{"name":"pipeline.e2e_latency_us","kind":"histogram","count":5000,"sampled_count":5000,"min":83.346,"max":63314.081,"mean":26111.6191484,"p50":19985.642,"p95":60932.585,"p99":62846.876},{"name":"pipeline.message_rate_per_second","kind":"gauge","value":76415.8204773522},{"name":"pipeline.payload_checksum","kind":"gauge","value":115200000},{"name":"pipeline.publish_failures","kind":"counter","value":0},{"name":"pipeline.trace_failures","kind":"counter","value":0},{"name":"planning.dropped_messages","kind":"counter","value":0},{"name":"planning.queue_high_watermark","kind":"gauge","value":4645},{"name":"process.maximum_resident_bytes","kind":"gauge","value":11460608},{"name":"process.system_cpu_seconds","kind":"gauge","value":0.030269},{"name":"process.user_cpu_seconds","kind":"gauge","value":0.056215},{"name":"transport.delivered_messages","kind":"counter","value":10000},{"name":"transport.dropped_messages","kind":"counter","value":0},{"name":"transport.published_messages","kind":"counter","value":10000}]},
+  "structured_logs": [
+    {"timestamp_ns":1787216165361884004,"monotonic_ns":27699175442289,"level":"INFO","component":"pipeline_benchmark","event":"started","generation":1,"trace_id":0,"span_id":0,"status":"ok","detail":"sensor-planning-control run started","attributes":{"messages":"5000","payload_bytes":"256"}},
+    {"timestamp_ns":1787216165431997596,"monotonic_ns":27699245555146,"level":"INFO","component":"pipeline_benchmark","event":"completed","generation":1,"trace_id":0,"span_id":0,"status":"ok","detail":"all messages reached control","attributes":{"completed":"5000","p99_us":"62846.876000"}}
+  ]
+}

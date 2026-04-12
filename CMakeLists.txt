@@ -146,3 +146,11 @@ if(AUTORUNTIME_BUILD_BENCHMARKS AND AUTORUNTIME_ENABLE_DDS)
     PRIVATE AutoRuntime::autoruntime Threads::Threads)
   autoruntime_enable_warnings(autoruntime_dds_qos_experiment)
 endif()
+
+if(AUTORUNTIME_BUILD_BENCHMARKS)
+  add_executable(autoruntime_pipeline_latency_benchmark
+    benchmarks/pipeline_latency_benchmark.cpp)
+  target_link_libraries(autoruntime_pipeline_latency_benchmark
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  autoruntime_enable_warnings(autoruntime_pipeline_latency_benchmark)
+endif()
