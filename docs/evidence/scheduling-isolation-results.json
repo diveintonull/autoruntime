@@ -1,0 +1,32 @@
+{
+  "slow_callback_ms": 300,
+  "observation_during_block_ms": 220,
+  "control_period_ms": 20,
+  "control_deadline_ms": 15,
+  "scenarios": [
+    {
+      "name": "shared_group",
+      "control_calls_during_300ms_block": 0,
+      "control_calls_final": 21,
+      "releases": 21,
+      "finished": 21,
+      "deadline_misses": 14,
+      "queue_overflows": 0,
+      "response_p50_us": 80162.030,
+      "response_p95_us": 260159.457,
+      "response_p99_us": 280159.195
+    },
+    {
+      "name": "isolated_groups",
+      "control_calls_during_300ms_block": 11,
+      "control_calls_final": 21,
+      "releases": 21,
+      "finished": 21,
+      "deadline_misses": 0,
+      "queue_overflows": 0,
+      "response_p50_us": 118.924,
+      "response_p95_us": 148.408,
+      "response_p99_us": 179.106
+    }
+  ]
+}

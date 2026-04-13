@@ -209,4 +209,10 @@ if(AUTORUNTIME_BUILD_BENCHMARKS)
   target_link_libraries(autoruntime_pipeline_latency_benchmark
     PRIVATE AutoRuntime::autoruntime Threads::Threads)
   autoruntime_enable_warnings(autoruntime_pipeline_latency_benchmark)
+
+  add_executable(autoruntime_scheduling_isolation_experiment
+    benchmarks/scheduling_isolation_experiment.cpp)
+  target_link_libraries(autoruntime_scheduling_isolation_experiment
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  autoruntime_enable_warnings(autoruntime_scheduling_isolation_experiment)
 endif()
