@@ -157,6 +157,41 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     add_test(NAME autoruntime.distributed
       COMMAND autoruntime_distributed_test)
     set_tests_properties(autoruntime.distributed PROPERTIES TIMEOUT 20)
+
+    add_executable(autoruntime_fault_injection_test
+      tests/fault_injection_test.cpp)
+    target_link_libraries(autoruntime_fault_injection_test
+      PRIVATE AutoRuntime::autoruntime Threads::Threads)
+    autoruntime_enable_warnings(autoruntime_fault_injection_test)
+
+    set(AUTORUNTIME_FAULT_CASES
+      transport_closed
+      queue_overflow
+      slow_callback_isolation
+      deadline_miss
+      cancelled_task
+      heartbeat_loss
+      no_progress
+      backlog_degraded
+      process_exit
+      stale_generation
+      rpc_disconnect
+      rpc_corrupt_frame
+      duplicate_membership
+      service_timeout)
+    foreach(fault_case IN LISTS AUTORUNTIME_FAULT_CASES)
+      add_test(NAME autoruntime.fault.${fault_case}
+        COMMAND autoruntime_fault_injection_test ${fault_case})
+      set_tests_properties(autoruntime.fault.${fault_case}
+        PROPERTIES LABELS fault TIMEOUT 5)
+    endforeach()
+
+    if(AUTORUNTIME_ENABLE_DDS)
+      add_test(NAME autoruntime.fault.dds_participant_loss
+        COMMAND autoruntime_fault_injection_test dds_participant_loss)
+      set_tests_properties(autoruntime.fault.dds_participant_loss
+        PROPERTIES LABELS fault TIMEOUT 5)
+    endif()
   endif()
 endif()
 
