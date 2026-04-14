@@ -21,11 +21,11 @@ Build directories and their `test.log` files are ignored local artifacts.
 
 | Profile | Configuration | Result | Raw log |
 | --- | --- | ---: | --- |
-| Debug | FastIPC + Cyclone DDS 11.0.1 | 22/22 | [log](evidence/test-debug.log) |
-| Release | FastIPC + Cyclone DDS 11.0.1 | 22/22 | [log](evidence/test-release.log) |
-| ASan | Debug, address + leak checks | 22/22 | [log](evidence/test-asan.log) |
-| UBSan | Debug, halt on first UB | 22/22 | [log](evidence/test-ubsan.log) |
-| TSan | Debug, halt on first race/deadlock report | 22/22 | [log](evidence/test-tsan.log) |
+| Debug | FastIPC + Cyclone DDS 11.0.1 | 23/23 | [log](evidence/test-debug.log) |
+| Release | FastIPC + Cyclone DDS 11.0.1 | 23/23 | [log](evidence/test-release.log) |
+| ASan | Debug, address + leak checks | 23/23 | [log](evidence/test-asan.log) |
+| UBSan | Debug, halt on first UB | 23/23 | [log](evidence/test-ubsan.log) |
+| TSan | Debug, halt on first race/deadlock report | 23/23 | [log](evidence/test-tsan.log) |
 
 Every profile contains 15 separately named fault tests.
 
@@ -53,7 +53,7 @@ setarch "$(uname -m)" -R ctest --test-dir BUILD --output-on-failure
 ```
 
 removes that virtual-address collision. The matrix script applies this wrapper
-only when `/proc/version` identifies WSL. After the wrapper, all 22 tests
+only when `/proc/version` identifies WSL. After the wrapper, all 23 tests
 passed with `halt_on_error=1`; no race or deadlock report was suppressed.
 
 This is an environment launch condition, not a test exclusion. Native Linux
