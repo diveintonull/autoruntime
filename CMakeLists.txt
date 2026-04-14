@@ -6,6 +6,7 @@ find_package(Threads REQUIRED)
 
 option(AUTORUNTIME_BUILD_TESTS "Build AutoRuntime tests" ON)
 option(AUTORUNTIME_BUILD_BENCHMARKS "Build AutoRuntime benchmarks" ON)
+option(AUTORUNTIME_BUILD_EXAMPLES "Build AutoRuntime examples" ON)
 option(AUTORUNTIME_ENABLE_FASTIPC "Build the FastIPC transport adapter" ON)
 option(AUTORUNTIME_ENABLE_DDS "Build the Cyclone DDS transport adapter" ON)
 set(AUTORUNTIME_CYCLONEDDS_ROOT
@@ -242,4 +243,17 @@ if(AUTORUNTIME_BUILD_BENCHMARKS)
   target_link_libraries(autoruntime_scheduling_isolation_experiment
     PRIVATE AutoRuntime::autoruntime Threads::Threads)
   autoruntime_enable_warnings(autoruntime_scheduling_isolation_experiment)
+endif()
+
+if(AUTORUNTIME_BUILD_EXAMPLES AND UNIX)
+  add_executable(autoruntime_pipeline_demo
+    examples/pipeline_demo.cpp)
+  target_link_libraries(autoruntime_pipeline_demo
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  autoruntime_enable_warnings(autoruntime_pipeline_demo)
+  if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
+    add_test(NAME autoruntime.example.pipeline
+      COMMAND autoruntime_pipeline_demo)
+    set_tests_properties(autoruntime.example.pipeline PROPERTIES TIMEOUT 5)
+  endif()
 endif()
