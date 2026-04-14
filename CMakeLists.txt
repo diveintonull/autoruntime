@@ -14,6 +14,33 @@ set(AUTORUNTIME_CYCLONEDDS_ROOT
 option(AUTORUNTIME_BUILD_TCP_BASELINE
        "Build the imported tcp_pubsub baseline target" OFF)
 
+set(AUTORUNTIME_SANITIZER "" CACHE STRING
+    "Runtime sanitizer: ASan, UBSan, TSan, or empty")
+set_property(CACHE AUTORUNTIME_SANITIZER PROPERTY STRINGS
+  "" ASan UBSan TSan)
+if(AUTORUNTIME_SANITIZER)
+  if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message(FATAL_ERROR
+      "AUTORUNTIME_SANITIZER requires GCC or Clang")
+  endif()
+  if(AUTORUNTIME_SANITIZER STREQUAL "ASan")
+    set(AUTORUNTIME_SANITIZER_FLAGS
+      -fsanitize=address -fno-omit-frame-pointer)
+  elseif(AUTORUNTIME_SANITIZER STREQUAL "UBSan")
+    set(AUTORUNTIME_SANITIZER_FLAGS
+      -fsanitize=undefined -fno-omit-frame-pointer
+      -fno-sanitize-recover=all)
+  elseif(AUTORUNTIME_SANITIZER STREQUAL "TSan")
+    set(AUTORUNTIME_SANITIZER_FLAGS
+      -fsanitize=thread -fno-omit-frame-pointer)
+  else()
+    message(FATAL_ERROR
+      "AUTORUNTIME_SANITIZER must be ASan, UBSan, TSan, or empty")
+  endif()
+  add_compile_options(${AUTORUNTIME_SANITIZER_FLAGS})
+  add_link_options(${AUTORUNTIME_SANITIZER_FLAGS})
+endif()
+
 if(AUTORUNTIME_BUILD_TCP_BASELINE)
   if(NOT EXISTS
      "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/asio/asio/asio/include/asio.hpp"
