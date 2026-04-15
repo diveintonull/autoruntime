@@ -5,55 +5,65 @@ Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/
 Test project /home/phil/job/new/projects/autoruntime/build-verify-release
 
       Start  1: autoruntime.executor
- 1/23 Test  #1: autoruntime.executor ........................   Passed    0.43 sec
+ 1/28 Test  #1: autoruntime.executor ........................   Passed    0.43 sec
       Start  2: autoruntime.runtime_api
- 2/23 Test  #2: autoruntime.runtime_api .....................   Passed    0.11 sec
+ 2/28 Test  #2: autoruntime.runtime_api .....................   Passed    0.12 sec
       Start  3: autoruntime.health_monitor
- 3/23 Test  #3: autoruntime.health_monitor ..................   Passed    0.00 sec
+ 3/28 Test  #3: autoruntime.health_monitor ..................   Passed    0.00 sec
       Start  4: autoruntime.observability
- 4/23 Test  #4: autoruntime.observability ...................   Passed    0.00 sec
+ 4/28 Test  #4: autoruntime.observability ...................   Passed    0.00 sec
       Start  5: autoruntime.fastipc_transport
- 5/23 Test  #5: autoruntime.fastipc_transport ...............   Passed    0.00 sec
+ 5/28 Test  #5: autoruntime.fastipc_transport ...............   Passed    0.00 sec
       Start  6: autoruntime.dds_transport
- 6/23 Test  #6: autoruntime.dds_transport ...................   Passed    0.06 sec
+ 6/28 Test  #6: autoruntime.dds_transport ...................   Passed    0.06 sec
       Start  7: autoruntime.distributed
- 7/23 Test  #7: autoruntime.distributed .....................   Passed    0.49 sec
+ 7/28 Test  #7: autoruntime.distributed .....................   Passed    0.49 sec
       Start  8: autoruntime.fault.transport_closed
- 8/23 Test  #8: autoruntime.fault.transport_closed ..........   Passed    0.00 sec
+ 8/28 Test  #8: autoruntime.fault.transport_closed ..........   Passed    0.00 sec
       Start  9: autoruntime.fault.queue_overflow
- 9/23 Test  #9: autoruntime.fault.queue_overflow ............   Passed    0.00 sec
+ 9/28 Test  #9: autoruntime.fault.queue_overflow ............   Passed    0.00 sec
       Start 10: autoruntime.fault.slow_callback_isolation
-10/23 Test #10: autoruntime.fault.slow_callback_isolation ...   Passed    0.30 sec
+10/28 Test #10: autoruntime.fault.slow_callback_isolation ...   Passed    0.30 sec
       Start 11: autoruntime.fault.deadline_miss
-11/23 Test #11: autoruntime.fault.deadline_miss .............   Passed    0.01 sec
+11/28 Test #11: autoruntime.fault.deadline_miss .............   Passed    0.01 sec
       Start 12: autoruntime.fault.cancelled_task
-12/23 Test #12: autoruntime.fault.cancelled_task ............   Passed    0.00 sec
+12/28 Test #12: autoruntime.fault.cancelled_task ............   Passed    0.00 sec
       Start 13: autoruntime.fault.heartbeat_loss
-13/23 Test #13: autoruntime.fault.heartbeat_loss ............   Passed    0.00 sec
+13/28 Test #13: autoruntime.fault.heartbeat_loss ............   Passed    0.00 sec
       Start 14: autoruntime.fault.no_progress
-14/23 Test #14: autoruntime.fault.no_progress ...............   Passed    0.00 sec
+14/28 Test #14: autoruntime.fault.no_progress ...............   Passed    0.00 sec
       Start 15: autoruntime.fault.backlog_degraded
-15/23 Test #15: autoruntime.fault.backlog_degraded ..........   Passed    0.00 sec
+15/28 Test #15: autoruntime.fault.backlog_degraded ..........   Passed    0.00 sec
       Start 16: autoruntime.fault.process_exit
-16/23 Test #16: autoruntime.fault.process_exit ..............   Passed    0.00 sec
+16/28 Test #16: autoruntime.fault.process_exit ..............   Passed    0.00 sec
       Start 17: autoruntime.fault.stale_generation
-17/23 Test #17: autoruntime.fault.stale_generation ..........   Passed    0.00 sec
+17/28 Test #17: autoruntime.fault.stale_generation ..........   Passed    0.00 sec
       Start 18: autoruntime.fault.rpc_disconnect
-18/23 Test #18: autoruntime.fault.rpc_disconnect ............   Passed    0.00 sec
+18/28 Test #18: autoruntime.fault.rpc_disconnect ............   Passed    0.00 sec
       Start 19: autoruntime.fault.rpc_corrupt_frame
-19/23 Test #19: autoruntime.fault.rpc_corrupt_frame .........   Passed    0.02 sec
+19/28 Test #19: autoruntime.fault.rpc_corrupt_frame .........   Passed    0.02 sec
       Start 20: autoruntime.fault.duplicate_membership
-20/23 Test #20: autoruntime.fault.duplicate_membership ......   Passed    0.03 sec
+20/28 Test #20: autoruntime.fault.duplicate_membership ......   Passed    0.03 sec
       Start 21: autoruntime.fault.service_timeout
-21/23 Test #21: autoruntime.fault.service_timeout ...........   Passed    0.12 sec
-      Start 22: autoruntime.fault.dds_participant_loss
-22/23 Test #22: autoruntime.fault.dds_participant_loss ......   Passed    0.00 sec
-      Start 23: autoruntime.example.pipeline
-23/23 Test #23: autoruntime.example.pipeline ................   Passed    0.04 sec
+21/28 Test #21: autoruntime.fault.service_timeout ...........   Passed    0.12 sec
+      Start 22: autoruntime.fault.message_delay
+22/28 Test #22: autoruntime.fault.message_delay .............   Passed    0.04 sec
+      Start 23: autoruntime.fault.message_drop
+23/28 Test #23: autoruntime.fault.message_drop ..............   Passed    0.00 sec
+      Start 24: autoruntime.fault.slow_consumer
+24/28 Test #24: autoruntime.fault.slow_consumer .............   Passed    0.00 sec
+      Start 25: autoruntime.fault.node_restart
+25/28 Test #25: autoruntime.fault.node_restart ..............   Passed    0.00 sec
+      Start 26: autoruntime.fault.shutdown_during_load
+26/28 Test #26: autoruntime.fault.shutdown_during_load ......   Passed    0.00 sec
+      Start 27: autoruntime.fault.dds_participant_loss
+27/28 Test #27: autoruntime.fault.dds_participant_loss ......   Passed    0.00 sec
+      Start 28: autoruntime.example.pipeline
+28/28 Test #28: autoruntime.example.pipeline ................   Passed    0.05 sec
 
-100% tests passed, 0 tests failed out of 23
+100% tests passed, 0 tests failed out of 28
 
 Label Time Summary:
-fault    =   0.51 sec*proc (15 tests)
+fault    =   0.56 sec*proc (20 tests)
 
-Total Test time (real) =   1.65 sec
+Total Test time (real) =   1.72 sec

@@ -12,64 +12,85 @@ ctest --test-dir projects/autoruntime/build-dds-release \
 
 The captured Release run is
 [`fault-matrix-release.log`](evidence/fault-matrix-release.log): all
-15 independently named CTest cases passed in 0.51 seconds.
+20 independently named CTest cases passed, with zero failures. The complete
+matrix was also repeated five times with `--repeat until-fail:5`.
 
 ## AutoRuntime cases
 
-| CTest case | Injected condition | Required observation |
+| CTest suffix | Injected condition | Required observation |
 | --- | --- | --- |
-| `transport_closed` | publish after transport shutdown | typed `Closed`, publish-failure counter increments |
-| `queue_overflow` | hold a worker and exceed task capacity | typed `QueueFull`, overflow counter increments |
-| `slow_callback_isolation` | planning callback sleeps 300 ms | control callback on a separate group completes within 50 ms |
-| `deadline_miss` | 10 ms callback with 1 ms deadline | completed sample is marked as a deadline miss |
-| `cancelled_task` | cancel before event release | later notify returns typed `Cancelled` |
-| `heartbeat_loss` | monotonic time advances beyond heartbeat lease | component enters `FAILED/HeartbeatLost` |
-| `no_progress` | heartbeats continue while progress sequence stalls | component enters `FAILED/NoProgress` |
-| `backlog_degraded` | reported backlog exceeds policy bound | component enters `DEGRADED/BacklogExceeded` |
-| `process_exit` | process probe changes from alive to dead | component enters `FAILED/ProcessExited` |
-| `stale_generation` | generation 1 update targets generation 2 record | typed `StaleGeneration`; current state is untouched |
+| `transport_closed` | publish after transport shutdown | typed `Closed`; publish-failure count increments |
+| `queue_overflow` | hold a worker and exceed task capacity | typed `QueueFull`; overflow count increments |
+| `slow_callback_isolation` | planning callback blocks for 300 ms | control callback in another group completes within 50 ms |
+| `deadline_miss` | 10 ms callback with a 1 ms deadline | completed sample records a deadline miss |
+| `cancelled_task` | cancel before an event release | later notify returns typed `Cancelled` |
+| `heartbeat_loss` | advance monotonic time past the heartbeat lease | `FAILED/HeartbeatLost` |
+| `no_progress` | heartbeat advances while progress stalls | `FAILED/NoProgress` |
+| `backlog_degraded` | report backlog above the policy bound | `DEGRADED/BacklogExceeded` |
+| `process_exit` | process probe changes from alive to dead | `FAILED/ProcessExited` |
+| `stale_generation` | generation 1 update targets generation 2 | typed `StaleGeneration`; current state is unchanged |
 | `rpc_disconnect` | connect to a closed TCP endpoint | typed `TransportError` within the call deadline |
-| `rpc_corrupt_frame` | send a zeroed 28-byte request header | server rejects it and increments malformed-request count |
-| `duplicate_membership` | two senders claim the same id/generation/sequence | one record remains and duplicate counter increments |
-| `service_timeout` | service callback exceeds client deadline | client receives typed `Timeout` |
-| `dds_participant_loss` | close the real Cyclone DDS participant then publish | typed `Closed`, publish-failure counter increments |
+| `rpc_corrupt_frame` | send a zeroed 28-byte request header | server increments malformed-request count |
+| `duplicate_membership` | two announcements claim one id/generation/sequence | one record remains; duplicate count increments |
+| `service_timeout` | service handler exceeds client deadline | client receives typed `Timeout` |
+| `message_delay` | test transport delays publish by 40 ms | delivery succeeds and measured delay is at least 30 ms |
+| `message_drop` | test transport silently drops one publish | no delivery; published and dropped counts are one |
+| `slow_consumer` | hold a subscriber while publishing into depth two | bounded high watermark of two and observable drops |
+| `node_restart` | fail generation 3, run recovery hooks | cleanup/start/reconnect run; generation 4 resumes |
+| `shutdown_during_load` | stop with one callback active and four queued releases | stop token is observed; workers join; new work is rejected |
+| `dds_participant_loss` | close a real Cyclone DDS participant, then publish | typed `Closed`; publish-failure count increments |
 
-The DDS case is registered only when `AUTORUNTIME_ENABLE_DDS=ON`; the other
-14 cases run in the dependency-light Unix build.
+The DDS case exists only with `AUTORUNTIME_ENABLE_DDS=ON`. The other
+19 cases run in the dependency-light Unix build. The delay/drop adapter is
+test-only; it wraps the public `Transport` seam and is not a claimed
+production network emulator.
 
-## Process and recovery integration cases
+## Specification coverage
 
-The fault label is supplemented by real process tests:
+The explicit cases map the requested fault families as follows:
 
-- `autoruntime.health_monitor` forks a planning process, sends `SIGKILL`,
-  observes `FAILED/ProcessExited`, runs cleanup/start/reconnect hooks,
-  advances generation 7 to 8, and verifies heartbeat/progress return it to
-  `RUNNING`.
-- `autoruntime.distributed` discovers a forked planning process over UDP,
-  performs a TCP RPC, kills the child, waits for membership lease expiry, and
-  verifies the endpoint disappears.
-- `autoruntime.fastipc_transport` transfers a versioned envelope across a
-  real parent/child shared-memory boundary.
+- node crash and restart: `process_exit`, `node_restart`,
+  plus the real `kill -9` integration below;
+- heartbeat loss: `heartbeat_loss`;
+- slow callback: `slow_callback_isolation`;
+- message delay and drop: `message_delay`,
+  `message_drop`;
+- slow consumer and queue overflow: `slow_consumer`,
+  `queue_overflow`;
+- transport disconnect: `transport_closed` and
+  `rpc_disconnect`;
+- DDS peer/participant loss: `dds_participant_loss`;
+- malformed message: `rpc_corrupt_frame`;
+- shutdown during load: `shutdown_during_load`.
 
-## FastIPC substrate cases
+## Process and recovery integration
 
-The separately buildable FastIPC project contributes 12 named CTest faults:
-peer missing, producer crash, consumer crash, restart, slow consumer, timeout,
-malformed header, version mismatch, stale shared memory, full queue, empty
-queue, and rapid restart. Its Release/ASan/UBSan/TSan logs live under
-`projects/fastipc/tests/results/`.
+The named fault cases are supplemented by real process tests:
 
-This separation is intentional: AutoRuntime checks policy and cross-transport
-behavior, while FastIPC owns shared-memory layout, peer liveness, and reclaim
-faults.
+- `autoruntime.health_monitor` forks a planning process, sends
+  `SIGKILL`, observes `FAILED/ProcessExited`, runs
+  cleanup/start/reconnect hooks, advances generation 7 to 8, and verifies
+  heartbeat and progress return it to `RUNNING`.
+- `autoruntime.distributed` discovers a forked planning process over
+  UDP, performs a TCP RPC, kills the child, waits for membership lease expiry,
+  and verifies the endpoint disappears.
+- `autoruntime.fastipc_transport` transfers a versioned envelope
+  across a real parent/child shared-memory boundary.
+
+## FastIPC substrate
+
+The separately buildable FastIPC project contributes 12 named shared-memory
+faults: peer missing, producer crash, consumer crash, restart, slow consumer,
+timeout, malformed header, version mismatch, stale shared memory, full queue,
+empty queue, and rapid restart. AutoRuntime checks runtime policy and adapter
+behavior; FastIPC owns layout, liveness, and reclaim invariants.
 
 ## Limits
 
-Most cases assert deterministic state/status transitions rather than timing
-precision. The two timing assertions use large margins (300 ms interference
-versus a 50 ms isolated completion window, and explicit deadline expiry).
-They validate failure semantics, not worst-case real-time guarantees.
-
-Network corruption currently tests framing and bounds, not fuzzing,
-authentication, packet reordering, or hostile traffic. Those remain security
-hardening work.
+These tests establish typed outcomes and state transitions, not hard real-time
+or Byzantine-fault guarantees. Timing assertions have wide margins. The
+message-delay/drop shim is deterministic and process-local; it does not model
+packet reordering, bandwidth limits, DDS status storms, or a lossy physical
+network. RPC corruption is a focused framing test, not a fuzzer. Long target
+hardware soak, network impairment, and authenticated hostile-peer testing
+remain production work.

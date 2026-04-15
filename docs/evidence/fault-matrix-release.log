@@ -5,39 +5,49 @@ Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/
 Test project /home/phil/job/new/projects/autoruntime/build-dds-release
 
       Start  8: autoruntime.fault.transport_closed
- 1/15 Test  #8: autoruntime.fault.transport_closed ..........   Passed    0.00 sec
+ 1/20 Test  #8: autoruntime.fault.transport_closed ..........   Passed    0.00 sec
       Start  9: autoruntime.fault.queue_overflow
- 2/15 Test  #9: autoruntime.fault.queue_overflow ............   Passed    0.00 sec
+ 2/20 Test  #9: autoruntime.fault.queue_overflow ............   Passed    0.00 sec
       Start 10: autoruntime.fault.slow_callback_isolation
- 3/15 Test #10: autoruntime.fault.slow_callback_isolation ...   Passed    0.30 sec
+ 3/20 Test #10: autoruntime.fault.slow_callback_isolation ...   Passed    0.30 sec
       Start 11: autoruntime.fault.deadline_miss
- 4/15 Test #11: autoruntime.fault.deadline_miss .............   Passed    0.01 sec
+ 4/20 Test #11: autoruntime.fault.deadline_miss .............   Passed    0.01 sec
       Start 12: autoruntime.fault.cancelled_task
- 5/15 Test #12: autoruntime.fault.cancelled_task ............   Passed    0.00 sec
+ 5/20 Test #12: autoruntime.fault.cancelled_task ............   Passed    0.00 sec
       Start 13: autoruntime.fault.heartbeat_loss
- 6/15 Test #13: autoruntime.fault.heartbeat_loss ............   Passed    0.00 sec
+ 6/20 Test #13: autoruntime.fault.heartbeat_loss ............   Passed    0.00 sec
       Start 14: autoruntime.fault.no_progress
- 7/15 Test #14: autoruntime.fault.no_progress ...............   Passed    0.00 sec
+ 7/20 Test #14: autoruntime.fault.no_progress ...............   Passed    0.00 sec
       Start 15: autoruntime.fault.backlog_degraded
- 8/15 Test #15: autoruntime.fault.backlog_degraded ..........   Passed    0.00 sec
+ 8/20 Test #15: autoruntime.fault.backlog_degraded ..........   Passed    0.00 sec
       Start 16: autoruntime.fault.process_exit
- 9/15 Test #16: autoruntime.fault.process_exit ..............   Passed    0.00 sec
+ 9/20 Test #16: autoruntime.fault.process_exit ..............   Passed    0.00 sec
       Start 17: autoruntime.fault.stale_generation
-10/15 Test #17: autoruntime.fault.stale_generation ..........   Passed    0.00 sec
+10/20 Test #17: autoruntime.fault.stale_generation ..........   Passed    0.00 sec
       Start 18: autoruntime.fault.rpc_disconnect
-11/15 Test #18: autoruntime.fault.rpc_disconnect ............   Passed    0.00 sec
+11/20 Test #18: autoruntime.fault.rpc_disconnect ............   Passed    0.00 sec
       Start 19: autoruntime.fault.rpc_corrupt_frame
-12/15 Test #19: autoruntime.fault.rpc_corrupt_frame .........   Passed    0.02 sec
+12/20 Test #19: autoruntime.fault.rpc_corrupt_frame .........   Passed    0.02 sec
       Start 20: autoruntime.fault.duplicate_membership
-13/15 Test #20: autoruntime.fault.duplicate_membership ......   Passed    0.03 sec
+13/20 Test #20: autoruntime.fault.duplicate_membership ......   Passed    0.03 sec
       Start 21: autoruntime.fault.service_timeout
-14/15 Test #21: autoruntime.fault.service_timeout ...........   Passed    0.12 sec
-      Start 22: autoruntime.fault.dds_participant_loss
-15/15 Test #22: autoruntime.fault.dds_participant_loss ......   Passed    0.00 sec
+14/20 Test #21: autoruntime.fault.service_timeout ...........   Passed    0.12 sec
+      Start 22: autoruntime.fault.message_delay
+15/20 Test #22: autoruntime.fault.message_delay .............   Passed    0.04 sec
+      Start 23: autoruntime.fault.message_drop
+16/20 Test #23: autoruntime.fault.message_drop ..............   Passed    0.00 sec
+      Start 24: autoruntime.fault.slow_consumer
+17/20 Test #24: autoruntime.fault.slow_consumer .............   Passed    0.00 sec
+      Start 25: autoruntime.fault.node_restart
+18/20 Test #25: autoruntime.fault.node_restart ..............   Passed    0.00 sec
+      Start 26: autoruntime.fault.shutdown_during_load
+19/20 Test #26: autoruntime.fault.shutdown_during_load ......   Passed    0.00 sec
+      Start 27: autoruntime.fault.dds_participant_loss
+20/20 Test #27: autoruntime.fault.dds_participant_loss ......   Passed    0.01 sec
 
-100% tests passed, 0 tests failed out of 15
+100% tests passed, 0 tests failed out of 20
 
 Label Time Summary:
-fault    =   0.51 sec*proc (15 tests)
+fault    =   0.56 sec*proc (20 tests)
 
-Total Test time (real) =   0.51 sec
+Total Test time (real) =   0.57 sec
