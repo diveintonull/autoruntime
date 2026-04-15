@@ -206,7 +206,12 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
       rpc_disconnect
       rpc_corrupt_frame
       duplicate_membership
-      service_timeout)
+      service_timeout
+      message_delay
+      message_drop
+      slow_consumer
+      node_restart
+      shutdown_during_load)
     foreach(fault_case IN LISTS AUTORUNTIME_FAULT_CASES)
       add_test(NAME autoruntime.fault.${fault_case}
         COMMAND autoruntime_fault_injection_test ${fault_case})

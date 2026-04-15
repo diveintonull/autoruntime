@@ -69,6 +69,75 @@ autoruntime::HealthPolicy HealthPolicy() {
   return policy;
 }
 
+class FaultInjectingTransport final : public autoruntime::Transport {
+ public:
+  explicit FaultInjectingTransport(
+      std::chrono::milliseconds publish_delay = 0ms,
+      bool drop_next_publish = false)
+      : publish_delay_(publish_delay),
+        drop_next_publish_(drop_next_publish) {}
+
+  autoruntime::Status Publish(
+      std::string_view topic, autoruntime::Message message,
+      const autoruntime::QosProfile& qos) override {
+    if (publish_delay_ > 0ms) {
+      std::this_thread::sleep_for(publish_delay_);
+    }
+    if (drop_next_publish_.exchange(false, std::memory_order_acq_rel)) {
+      injected_publishes_.fetch_add(1U, std::memory_order_relaxed);
+      injected_drops_.fetch_add(1U, std::memory_order_relaxed);
+      return autoruntime::Status::Ok();
+    }
+    return inner_.Publish(topic, std::move(message), qos);
+  }
+
+  autoruntime::Result<autoruntime::SubscriptionId> Subscribe(
+      std::string_view topic, const autoruntime::QosProfile& qos,
+      autoruntime::TransportMessageCallback callback) override {
+    return inner_.Subscribe(topic, qos, std::move(callback));
+  }
+
+  autoruntime::Status Unsubscribe(
+      autoruntime::SubscriptionId subscription_id) override {
+    return inner_.Unsubscribe(subscription_id);
+  }
+
+  autoruntime::Result<autoruntime::ServiceId> AdvertiseService(
+      std::string_view service_name,
+      autoruntime::TransportServiceCallback callback) override {
+    return inner_.AdvertiseService(service_name, std::move(callback));
+  }
+
+  autoruntime::Status RemoveService(
+      autoruntime::ServiceId service_id) override {
+    return inner_.RemoveService(service_id);
+  }
+
+  autoruntime::Result<autoruntime::Message> Request(
+      std::string_view service_name, autoruntime::Message request,
+      autoruntime::Deadline deadline) override {
+    return inner_.Request(service_name, std::move(request), deadline);
+  }
+
+  [[nodiscard]] autoruntime::TransportStats Stats() const override {
+    auto stats = inner_.Stats();
+    stats.published_messages +=
+        injected_publishes_.load(std::memory_order_relaxed);
+    stats.dropped_messages +=
+        injected_drops_.load(std::memory_order_relaxed);
+    return stats;
+  }
+
+  autoruntime::Status Close() override { return inner_.Close(); }
+
+ private:
+  autoruntime::InMemoryTransport inner_;
+  std::chrono::milliseconds publish_delay_;
+  std::atomic<bool> drop_next_publish_{false};
+  std::atomic<std::uint64_t> injected_publishes_{0U};
+  std::atomic<std::uint64_t> injected_drops_{0U};
+};
+
 int TransportClosed() {
   autoruntime::InMemoryTransport transport;
   CHECK(transport.Close());
@@ -374,6 +443,195 @@ int ServiceTimeout() {
   return 0;
 }
 
+int MessageDelay() {
+  auto transport =
+      std::make_shared<FaultInjectingTransport>(40ms, false);
+  std::atomic<std::uint64_t> received{0U};
+  auto subscription = transport->Subscribe(
+      "sensor/delayed", {},
+      [&](autoruntime::Message) {
+        received.fetch_add(1U, std::memory_order_release);
+      });
+  CHECK(subscription);
+
+  autoruntime::Message message;
+  message.envelope.trace_id = 1U;
+  const auto started_at = std::chrono::steady_clock::now();
+  CHECK(transport->Publish(
+      "sensor/delayed", std::move(message), {}));
+  const auto elapsed = std::chrono::steady_clock::now() - started_at;
+
+  CHECK(elapsed >= 30ms);
+  CHECK(received.load(std::memory_order_acquire) == 1U);
+  const auto stats = transport->Stats();
+  CHECK(stats.published_messages == 1U);
+  CHECK(stats.delivered_messages == 1U);
+  CHECK(transport->Unsubscribe(subscription.value()));
+  return 0;
+}
+
+int MessageDrop() {
+  auto transport =
+      std::make_shared<FaultInjectingTransport>(0ms, true);
+  std::atomic<std::uint64_t> received{0U};
+  auto subscription = transport->Subscribe(
+      "sensor/drop", {},
+      [&](autoruntime::Message) {
+        received.fetch_add(1U, std::memory_order_release);
+      });
+  CHECK(subscription);
+
+  autoruntime::Message message;
+  message.envelope.trace_id = 2U;
+  CHECK(transport->Publish("sensor/drop", std::move(message), {}));
+  CHECK(received.load(std::memory_order_acquire) == 0U);
+  const auto stats = transport->Stats();
+  CHECK(stats.published_messages == 1U);
+  CHECK(stats.delivered_messages == 0U);
+  CHECK(stats.dropped_messages == 1U);
+  CHECK(transport->Unsubscribe(subscription.value()));
+  return 0;
+}
+
+int SlowConsumer() {
+  auto executor = std::make_shared<autoruntime::Executor>();
+  auto transport =
+      std::make_shared<autoruntime::InMemoryTransport>();
+  const auto group = Take(executor->CreateCallbackGroup(
+      {"slow-consumer", 1U, 8U}));
+  autoruntime::Node producer(
+      {"camera", 1U}, executor, transport);
+  autoruntime::Node consumer(
+      {"perception", 1U}, executor, transport);
+
+  std::mutex mutex;
+  std::condition_variable condition;
+  bool entered = false;
+  bool release = false;
+  auto subscriber = consumer.CreateSubscriber(
+      "camera/image",
+      autoruntime::SubscriptionOptions{
+          group, 2U, autoruntime::OverflowPolicy::DropNewest},
+      [&](const autoruntime::Message&) {
+        std::unique_lock lock(mutex);
+        entered = true;
+        condition.notify_all();
+        condition.wait(lock, [&] { return release; });
+      });
+  auto publisher = producer.CreatePublisher("camera/image");
+  CHECK(subscriber && publisher);
+  CHECK(executor->Start());
+
+  const std::vector<std::byte> payload{std::byte{0x01}};
+  CHECK(publisher.value().Publish(payload));
+  {
+    std::unique_lock lock(mutex);
+    CHECK(condition.wait_for(lock, 1s, [&] { return entered; }));
+  }
+  for (std::size_t index = 0U; index < 8U; ++index) {
+    CHECK(publisher.value().Publish(payload));
+  }
+  const auto blocked_stats = subscriber.value().Stats();
+  CHECK(blocked_stats.dropped_messages > 0U);
+  CHECK(blocked_stats.queue_high_watermark == 2U);
+  {
+    std::lock_guard lock(mutex);
+    release = true;
+  }
+  condition.notify_all();
+  CHECK(WaitUntil(
+      [&] {
+        return subscriber.value().Stats().delivered_messages >= 1U;
+      },
+      1s));
+  CHECK(subscriber.value().Close());
+  CHECK(executor->Stop(autoruntime::Deadline::After(1s)));
+  return 0;
+}
+
+int NodeRestart() {
+  bool alive = true;
+  autoruntime::HealthMonitor monitor(
+      [&](std::int64_t) { return alive; });
+  const auto base = autoruntime::HealthMonitor::Clock::now();
+  CHECK(monitor.Register(
+      {"planning", 10, 3U, HealthPolicy()}, base));
+  CHECK(monitor.Heartbeat("planning", 3U, 1U, base));
+  CHECK(monitor.Progress("planning", 3U, 1U, base));
+
+  alive = false;
+  static_cast<void>(monitor.Evaluate(base + 1ms));
+  CHECK(monitor.Snapshot("planning").value().state ==
+        autoruntime::HealthState::Failed);
+
+  bool cleaned = false;
+  bool started = false;
+  bool reconnected = false;
+  autoruntime::RecoveryHooks hooks;
+  hooks.cleanup = [&](std::string_view, std::uint64_t generation) {
+    cleaned = generation == 3U;
+    return autoruntime::Status::Ok();
+  };
+  hooks.start = [&](std::string_view, std::uint64_t generation)
+      -> autoruntime::Result<std::int64_t> {
+    started = generation == 4U;
+    alive = true;
+    return std::int64_t{20};
+  };
+  hooks.reconnect = [&](std::string_view, std::uint64_t generation) {
+    reconnected = generation == 4U;
+    return autoruntime::Status::Ok();
+  };
+  auto recovered = monitor.Recover(
+      "planning", hooks, autoruntime::Deadline::After(1s));
+  CHECK(recovered);
+  CHECK(cleaned && started && reconnected);
+  CHECK(recovered.value().generation == 4U);
+  const auto stale = monitor.Heartbeat("planning", 3U, 2U);
+  CHECK(!stale);
+  CHECK(stale.code() == autoruntime::StatusCode::StaleGeneration);
+  CHECK(monitor.Heartbeat("planning", 4U, 1U));
+  CHECK(monitor.Progress("planning", 4U, 1U));
+  CHECK(monitor.Snapshot("planning").value().state ==
+        autoruntime::HealthState::Running);
+  return 0;
+}
+
+int ShutdownDuringLoad() {
+  autoruntime::Executor executor;
+  const auto group = Take(executor.CreateCallbackGroup(
+      {"shutdown", 1U, 16U}));
+  std::atomic<bool> entered{false};
+  std::atomic<bool> observed_stop{false};
+  const auto task = Take(executor.AddTask(
+      EventConfig("cooperative-load", group, 8U),
+      [&](std::stop_token stop_token) {
+        entered.store(true, std::memory_order_release);
+        while (!stop_token.stop_requested()) {
+          std::this_thread::sleep_for(1ms);
+        }
+        observed_stop.store(true, std::memory_order_release);
+      }));
+  CHECK(executor.Start());
+  CHECK(executor.Notify(task));
+  CHECK(WaitUntil(
+      [&] { return entered.load(std::memory_order_acquire); }, 1s));
+  for (std::size_t index = 0U; index < 4U; ++index) {
+    CHECK(executor.Notify(task));
+  }
+
+  const auto started_at = std::chrono::steady_clock::now();
+  CHECK(executor.Stop(autoruntime::Deadline::After(1s)));
+  const auto elapsed = std::chrono::steady_clock::now() - started_at;
+  CHECK(observed_stop.load(std::memory_order_acquire));
+  CHECK(elapsed < 500ms);
+  CHECK(!executor.running());
+  const auto after_stop = executor.Notify(task);
+  CHECK(!after_stop);
+  CHECK(after_stop.code() == autoruntime::StatusCode::Closed);
+  return 0;
+}
+
 #if defined(AUTORUNTIME_HAS_DDS)
 int DdsParticipantLoss() {
   autoruntime::DdsTransportConfig config;
@@ -402,7 +660,7 @@ struct FaultCase {
   FaultFunction run;
 };
 
-constexpr std::array<FaultCase, 14U> kFaultCases{{
+constexpr std::array<FaultCase, 19U> kFaultCases{{
     {"transport_closed", TransportClosed},
     {"queue_overflow", QueueOverflow},
     {"slow_callback_isolation", SlowCallbackIsolation},
@@ -417,6 +675,11 @@ constexpr std::array<FaultCase, 14U> kFaultCases{{
     {"rpc_corrupt_frame", RpcCorruptFrame},
     {"duplicate_membership", DuplicateMembership},
     {"service_timeout", ServiceTimeout},
+    {"message_delay", MessageDelay},
+    {"message_drop", MessageDrop},
+    {"slow_consumer", SlowConsumer},
+    {"node_restart", NodeRestart},
+    {"shutdown_during_load", ShutdownDuringLoad},
 }};
 
 }  // namespace
