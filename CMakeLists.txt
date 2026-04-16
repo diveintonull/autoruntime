@@ -8,7 +8,7 @@ option(AUTORUNTIME_BUILD_TESTS "Build AutoRuntime tests" ON)
 option(AUTORUNTIME_BUILD_BENCHMARKS "Build AutoRuntime benchmarks" ON)
 option(AUTORUNTIME_BUILD_EXAMPLES "Build AutoRuntime examples" ON)
 option(AUTORUNTIME_ENABLE_FASTIPC "Build the FastIPC transport adapter" ON)
-option(AUTORUNTIME_ENABLE_DDS "Build the Cyclone DDS transport adapter" ON)
+option(AUTORUNTIME_ENABLE_DDS "Build the Cyclone DDS transport adapter" OFF)
 set(AUTORUNTIME_CYCLONEDDS_ROOT
     "${CMAKE_CURRENT_SOURCE_DIR}/.deps/cyclonedds-11.0.1"
     CACHE PATH "Cyclone DDS 11.0.1 installation prefix")
