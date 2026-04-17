@@ -7,15 +7,15 @@ Test project /home/phil/job/new/projects/autoruntime/build-verify-debug
       Start  1: autoruntime.executor
  1/28 Test  #1: autoruntime.executor ........................   Passed    0.43 sec
       Start  2: autoruntime.runtime_api
- 2/28 Test  #2: autoruntime.runtime_api .....................   Passed    0.12 sec
+ 2/28 Test  #2: autoruntime.runtime_api .....................   Passed    0.11 sec
       Start  3: autoruntime.health_monitor
- 3/28 Test  #3: autoruntime.health_monitor ..................   Passed    0.00 sec
+ 3/28 Test  #3: autoruntime.health_monitor ..................   Passed    0.01 sec
       Start  4: autoruntime.observability
  4/28 Test  #4: autoruntime.observability ...................   Passed    0.00 sec
       Start  5: autoruntime.fastipc_transport
- 5/28 Test  #5: autoruntime.fastipc_transport ...............   Passed    0.00 sec
+ 5/28 Test  #5: autoruntime.fastipc_transport ...............   Passed    0.02 sec
       Start  6: autoruntime.dds_transport
- 6/28 Test  #6: autoruntime.dds_transport ...................   Passed    0.06 sec
+ 6/28 Test  #6: autoruntime.dds_transport ...................   Passed    0.07 sec
       Start  7: autoruntime.distributed
  7/28 Test  #7: autoruntime.distributed .....................   Passed    0.49 sec
       Start  8: autoruntime.fault.transport_closed
@@ -59,7 +59,7 @@ Test project /home/phil/job/new/projects/autoruntime/build-verify-debug
       Start 27: autoruntime.fault.dds_participant_loss
 27/28 Test #27: autoruntime.fault.dds_participant_loss ......   Passed    0.00 sec
       Start 28: autoruntime.example.pipeline
-28/28 Test #28: autoruntime.example.pipeline ................   Passed    0.05 sec
+28/28 Test #28: autoruntime.example.pipeline ................   Passed    0.04 sec
 
 100% tests passed, 0 tests failed out of 28
 

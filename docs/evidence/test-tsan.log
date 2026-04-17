@@ -13,7 +13,7 @@ Test project /home/phil/job/new/projects/autoruntime/build-verify-tsan
       Start  4: autoruntime.observability
  4/28 Test  #4: autoruntime.observability ...................   Passed    0.01 sec
       Start  5: autoruntime.fastipc_transport
- 5/28 Test  #5: autoruntime.fastipc_transport ...............   Passed    0.02 sec
+ 5/28 Test  #5: autoruntime.fastipc_transport ...............   Passed    0.04 sec
       Start  6: autoruntime.dds_transport
  6/28 Test  #6: autoruntime.dds_transport ...................   Passed    0.07 sec
       Start  7: autoruntime.distributed
@@ -59,11 +59,11 @@ Test project /home/phil/job/new/projects/autoruntime/build-verify-tsan
       Start 27: autoruntime.fault.dds_participant_loss
 27/28 Test #27: autoruntime.fault.dds_participant_loss ......   Passed    0.01 sec
       Start 28: autoruntime.example.pipeline
-28/28 Test #28: autoruntime.example.pipeline ................   Passed    0.06 sec
+28/28 Test #28: autoruntime.example.pipeline ................   Passed    0.05 sec
 
 100% tests passed, 0 tests failed out of 28
 
 Label Time Summary:
-fault    =   0.70 sec*proc (20 tests)
+fault    =   0.71 sec*proc (20 tests)
 
-Total Test time (real) =   1.95 sec
+Total Test time (real) =   1.97 sec

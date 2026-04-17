@@ -1,0 +1,65 @@
+[OUTPUT] 
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-default-verify-979129a
+
+[HANDLER_OUTPUT] 
+Test project /home/phil/job/new/projects/autoruntime/build-default-verify-979129a
+
+      Start  1: autoruntime.executor
+ 1/26 Test  #1: autoruntime.executor ........................   Passed    0.43 sec
+      Start  2: autoruntime.runtime_api
+ 2/26 Test  #2: autoruntime.runtime_api .....................   Passed    0.12 sec
+      Start  3: autoruntime.health_monitor
+ 3/26 Test  #3: autoruntime.health_monitor ..................   Passed    0.00 sec
+      Start  4: autoruntime.observability
+ 4/26 Test  #4: autoruntime.observability ...................   Passed    0.00 sec
+      Start  5: autoruntime.fastipc_transport
+ 5/26 Test  #5: autoruntime.fastipc_transport ...............   Passed    0.02 sec
+      Start  6: autoruntime.distributed
+ 6/26 Test  #6: autoruntime.distributed .....................   Passed    0.49 sec
+      Start  7: autoruntime.fault.transport_closed
+ 7/26 Test  #7: autoruntime.fault.transport_closed ..........   Passed    0.01 sec
+      Start  8: autoruntime.fault.queue_overflow
+ 8/26 Test  #8: autoruntime.fault.queue_overflow ............   Passed    0.00 sec
+      Start  9: autoruntime.fault.slow_callback_isolation
+ 9/26 Test  #9: autoruntime.fault.slow_callback_isolation ...   Passed    0.30 sec
+      Start 10: autoruntime.fault.deadline_miss
+10/26 Test #10: autoruntime.fault.deadline_miss .............   Passed    0.01 sec
+      Start 11: autoruntime.fault.cancelled_task
+11/26 Test #11: autoruntime.fault.cancelled_task ............   Passed    0.00 sec
+      Start 12: autoruntime.fault.heartbeat_loss
+12/26 Test #12: autoruntime.fault.heartbeat_loss ............   Passed    0.00 sec
+      Start 13: autoruntime.fault.no_progress
+13/26 Test #13: autoruntime.fault.no_progress ...............   Passed    0.00 sec
+      Start 14: autoruntime.fault.backlog_degraded
+14/26 Test #14: autoruntime.fault.backlog_degraded ..........   Passed    0.00 sec
+      Start 15: autoruntime.fault.process_exit
+15/26 Test #15: autoruntime.fault.process_exit ..............   Passed    0.00 sec
+      Start 16: autoruntime.fault.stale_generation
+16/26 Test #16: autoruntime.fault.stale_generation ..........   Passed    0.00 sec
+      Start 17: autoruntime.fault.rpc_disconnect
+17/26 Test #17: autoruntime.fault.rpc_disconnect ............   Passed    0.00 sec
+      Start 18: autoruntime.fault.rpc_corrupt_frame
+18/26 Test #18: autoruntime.fault.rpc_corrupt_frame .........   Passed    0.02 sec
+      Start 19: autoruntime.fault.duplicate_membership
+19/26 Test #19: autoruntime.fault.duplicate_membership ......   Passed    0.03 sec
+      Start 20: autoruntime.fault.service_timeout
+20/26 Test #20: autoruntime.fault.service_timeout ...........   Passed    0.12 sec
+      Start 21: autoruntime.fault.message_delay
+21/26 Test #21: autoruntime.fault.message_delay .............   Passed    0.04 sec
+      Start 22: autoruntime.fault.message_drop
+22/26 Test #22: autoruntime.fault.message_drop ..............   Passed    0.00 sec
+      Start 23: autoruntime.fault.slow_consumer
+23/26 Test #23: autoruntime.fault.slow_consumer .............   Passed    0.00 sec
+      Start 24: autoruntime.fault.node_restart
+24/26 Test #24: autoruntime.fault.node_restart ..............   Passed    0.00 sec
+      Start 25: autoruntime.fault.shutdown_during_load
+25/26 Test #25: autoruntime.fault.shutdown_during_load ......   Passed    0.00 sec
+      Start 26: autoruntime.example.pipeline
+26/26 Test #26: autoruntime.example.pipeline ................   Passed    0.05 sec
+
+100% tests passed, 0 tests failed out of 26
+
+Label Time Summary:
+fault    =   0.56 sec*proc (19 tests)
+
+Total Test time (real) =   1.68 sec

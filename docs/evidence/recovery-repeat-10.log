@@ -1,0 +1,30 @@
+[OUTPUT] 
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-verify-release
+
+[HANDLER_OUTPUT] 
+Test project /home/phil/job/new/projects/autoruntime/build-verify-release
+
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+    Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+    Start 5: autoruntime.fastipc_transport
+1/1 Test #5: autoruntime.fastipc_transport ....   Passed    0.02 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Total Test time (real) =   0.16 sec

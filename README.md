@@ -1,210 +1,136 @@
 # AutoRuntime
 
-## Upstream and Attribution
+AutoRuntime is a Linux-focused C++20 robotics runtime built as a deep
+derivative of
+[eclipse-ecal/tcp_pubsub](https://github.com/eclipse-ecal/tcp_pubsub).
+It keeps the pinned upstream history and MIT notices while replacing the
+application-facing architecture with a transport-neutral runtime, explicit
+scheduling policy, health supervision, observability, and bounded distributed
+control-plane primitives.
 
-AutoRuntime is a deep derivative of
-[eclipse-ecal/tcp_pubsub](https://github.com/eclipse-ecal/tcp_pubsub), pinned at
-1540876ee8aad623a9b089baaf3f948579b466d9 and distributed under MIT. The
-original history, LICENSE, Continental copyright, and portable_endian.h notice
-are preserved.
+This is an engineering portfolio project, not a production-certified
+middleware distribution.
 
-The baseline supplies an Asio TCP binary pub/sub transport, failover, and its
-build/tests. AutoRuntime is redesigning the runtime API, executor, queue
-semantics, transport boundary, health/recovery, observability, distributed
-extension, and verification. docs/upstream-analysis.md records the boundary.
+## Implemented capabilities
 
-The remainder is the imported upstream README. It describes the baseline, not
-yet every target capability.
-[![Windows](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-windows.yml/badge.svg)](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-windows.yml) [![Ubuntu](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-ubuntu.yml/badge.svg)](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-ubuntu.yml) [![macOS](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-macos.yml/badge.svg)](https://github.com/eclipse-ecal/tcp_pubsub/actions/workflows/build-macos.yml)
+| Area | Current behavior |
+| --- | --- |
+| Runtime API | `Node`, `Publisher`, `Subscriber`, `Service`, `Client`, `Timer`, `Executor`, `Transport`, `HealthMonitor` |
+| Scheduling | Periodic, Event, and Async tasks; priority queues; callback groups; bounded queues; cooperative cancellation; deadline/queue/execution samples |
+| Pub/sub | Per-subscription queues, DropNewest/DropOldest overflow, slow-callback isolation, versioned message envelope |
+| Services | Deadline-bounded request/reply on the in-memory transport; bounded service queue |
+| Transports | In-memory, FastIPC shared memory, and an optional real Cyclone DDS 11.0.1 adapter |
+| Recovery | Heartbeat, progress, backlog, deadline-miss and process-exit evaluation; generation-aware cleanup/start/reconnect hooks |
+| Observability | Counters, gauges, bounded histograms, JSON logs, trace spans, E2E latency, CPU/RSS/context-switch snapshots |
+| Distributed slice | Explicit-peer UDP discovery with bounded membership and lease expiry; framed deadline/cancellable TCP RPC |
+| Verification | Default 26-test build; full 28-test DDS build across Debug/Release/ASan/UBSan/TSan; 20 named runtime fault cases |
 
-# tcp_pubsub - TCP Publish/Subscribe library
+## Architecture
 
-tcp_pubsub is a minimal publish-subscribe library that transports data via TCP. The project is CMake based. The dependencies are integrated as git submodules. In your own Project you can either use those submodules as well, or provide the dependencies in your own manner.
+```text
+Node API
+  |-- Publisher / Subscriber / Service / Client / Timer
+  |          |
+  |          +--> Executor callback groups and bounded queues
+  |
+  +--> Transport interface
+         |-- InMemoryTransport
+         |-- FastIpcTransport --> ../fastipc
+         +-- DdsTransport -----> Cyclone DDS 11.0.1
 
-tcp_pubsub does not define a message format but only transports binary blobs. It does however define a protocol around that, which is kept as lightweight as possible.
-
-Dependencies:
-
-- [asio](https://github.com/chriskohlhoff/asio.git)
-- [recycle](https://github.com/steinwurf/recycle.git)
-
-## Hello World Example
-
-A very similar Example is also provided in the repository.
-
-### Publisher
-
-```cpp
-#include <thread>
-
-#include <tcp_pubsub/executor.h>
-#include <tcp_pubsub/publisher.h>
-
-int main()
-{
-  // Create a "Hello World" buffer
-  std::string data_to_send = "Hello World";
-  
-  // Create an Executor with a thread-pool size of 6. If you create multiple
-  // publishers and subscribers, they all should share the same Executor.
-  std::shared_ptr<tcp_pubsub::Executor> executor = std::make_shared<tcp_pubsub::Executor>(6);
-  
-  // Create a publisher that will offer the data on port 1588
-  tcp_pubsub::Publisher hello_world_publisher(executor, 1588);
-
-  for (;;)
-  {
-    // Send the "Hello World" string by passing the pointer to the first
-    // character and the length.
-    hello_world_publisher.send(&data_to_send[0], data_to_send.size());
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  }
-
-  return 0;
-}
+HealthMonitor   Metrics / Logs / Traces   Discovery / RPC
+     \                 |                     /
+      +----------- application policy -------+
 ```
 
-### Subscriber
+The runtime core never names a concrete transport type. Imported
+`tcp_pubsub` remains available only as an opt-in baseline target and is not
+linked into the default AutoRuntime library. See
+[architecture.md](docs/architecture.md) and
+[UPSTREAM_DIFF.md](UPSTREAM_DIFF.md).
 
-```cpp
-#include <iostream>
-#include <thread>
+## Dependency-light build
 
-#include <tcp_pubsub/executor.h>
-#include <tcp_pubsub/subscriber.h>
+From the repository root:
 
-int main()
-{
-  // Create an Executor with a thread-pool size of 6. If you create multiple
-  // publishers and subscribers, they all should share the same Executor.
-  std::shared_ptr<tcp_pubsub::Executor> executor = std::make_shared<tcp_pubsub::Executor>(6);
-
-  // Create a subscriber
-  tcp_pubsub::Subscriber hello_world_subscriber(executor);
-  
-  // Add a session to the subscriber that connects to port 1588 on localhost. A 
-  // subscriber will aggregate traffic from multiple source, if you add multiple
-  // sessions.
-  hello_world_subscriber.addSession("127.0.0.1", 1588);
-
-  // Create a Callback that will be called each time a data packet is received.
-  // This function will create an std::string from the packet and print it to
-  // the console.
-  std::function<void(const tcp_pubsub::CallbackData& callback_data)> callback_function
-        = [](const tcp_pubsub::CallbackData& callback_data) -> void
-          {
-            std::cout << "Received playload: "
-                      << std::string(callback_data.buffer_->data(), callback_data.buffer_->size())
-                      << std::endl;
-          };
-
-  // Set the callback to the subsriber
-  hello_world_subscriber.setCallback(callback_function);
-    
-  // Prevent the application from exiting immediatelly
-  for (;;) std::this_thread::sleep_for(std::chrono::milliseconds(500));
-  return 0;
-}
+```bash
+cmake -S projects/autoruntime -B projects/autoruntime/build -G Ninja
+cmake --build projects/autoruntime/build
+ctest --test-dir projects/autoruntime/build --output-on-failure
 ```
 
-## CMake Options
+DDS is opt-in, so these commands require CMake, Ninja, a C++20 compiler,
+pthreads, and the adjacent FastIPC project only. The verified default build
+registered 26 tests and passed 26/26.
 
-You can set the following CMake Options to control how tcp_pubsub is built:
+Run the sensor -> planning -> control example:
 
-| Option                             | Type  | Default | Explanation                                                                                                                                         |
-|------------------------------------|-------|---------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| `TCP_PUBSUB_BUILD_SAMPLES`         | `BOOL`| `ON`    | Build project samples.                                                                                                                              |
-| `TCP_PUBSUB_BUILD_ECAL_SAMPLES`    | `BOOL`| `OFF`   | Build eCAL-based project samples. Requires eCAL to be findable by CMake.                                                                            |
-| `TCP_PUBSUB_USE_BUILTIN_ASIO`      | `BOOL`| `ON`    | Use the builtin asio submodule. If set to `OFF`, asio must be available from somewhere else (e.g. system libs).                                     |
-| `TCP_PUBSUB_USE_BUILTIN_RECYCLE`   | `BOOL`| `ON`    | Use the builtin `steinwurf::recycle` submodule. If set to `OFF`, recycle must be available from somewhere else (e.g. system libs).                  |
-| `TCP_PUBSUB_BUILD_TESTS`           | `BOOL`| `OFF`   | Build the tcp_pubsub tests. Requires Gtest::GTest to be findable by CMake. |
-| `TCP_PUBSUB_USE_BUILTIN_GTEST`     | `BOOL`| `ON` (if building tests) | Use the builtin GoogleTest submodule. Only needed if `TCP_PUBSUB_BUILD_TESTS` is `ON`. If set to `OFF`, GoogleTest must be available from elsewhere. |
-| `TCP_PUBSUB_LIBRARY_TYPE`          | `STRING` |             | Controls the library type of tcp_pubsub by injecting the string into the `add_library` call. Can be set to STATIC / SHARED / OBJECT. If set, this will override the regular `BUILD_SHARED_LIBS` CMake option. If not set, CMake will use the default setting, which is controlled by `BUILD_SHARED_LIBS`.                |
-
-## How to checkout and build
-
-There are several examples provided that aim to show you the functionality.
-
-1. Install cmake and git / git-for-windows
-
-2. Checkout this repo and the asio submodule
-	```console
-	git clone https://github.com/eclipse-ecal/tcp_pubsub.git
-	cd tcp_pubsub
-	git submodule init
-	git submodule update
-	```
-
-3. CMake the project *(Building as debug will add some debug output)*
-	```console
-	mkdir _build
-	cd _build
-	cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=_install
-	```
-
-4. Build the project
-	- Linux: `make`
-	- Windows: Open `_build\tcp_pubsub.sln` with Visual Studio and build one of the example projects
-
-5. Start either of the example pairs on the same machine.
-	- `hello_world_publisher /.exe` + `hello_world_subscriber /.exe`
-	  *or*
-	- `performance_publisher /.exe` + `performance_subscriber /.exe`
-
-## The Protocol (Version 0)
-
-When using this library, you do not need to know how the protocol works. Both the subscriber and receiver are completely implemented and ready for you to use. This section is meant for advanced users that are interested in the underlying protocol.
-
-<details>
-<summary>Show</summary>
-
-### Message flow
-
-The Protocol is quite simple:
-
-1. The **Subsriber** connects to the publisher and sends a ProtocolHandshakeRequest. This Message contains the maximum protocol Version the Subscriber supports
-
-2. The **Publisher** returns a ProtocolHandshakeResponse. This message contains the protocol version that will be used from now on. The version must not be higher than the version sent by the subsriber.
-
-3. The **Publisher** starts sending data to the subsriber.
-
-_The ProtocolHandshake is meant to provide future-proof expansions. At the moment the only available protocol version is 0._
-
-```
-Subscriber                     Publisher
-   |                               |
-   |  -> ProtocolHandshakeReq  ->  |
-   |                               |
-   |  <- ProtocolHandshakeResp <-  |
-   |                               |
-   |  <--------- DATA <----------  |
-   |  <--------- DATA <----------  |
-   |  <--------- DATA <----------  |
-   |              ...              |
+```bash
+projects/autoruntime/build/autoruntime_pipeline_demo
 ```
 
-### Message layout
+## Full DDS and sanitizer matrix
 
-The protocol uses the following message layout. Values that are not sent by the sender are to be interpreted as 0.
+The bootstrap script downloads Cyclone DDS 11.0.1, verifies its pinned SHA-256,
+and installs it below the ignored `.deps` directory:
 
-- **General Message header**
-	Each message will have a message header as follows. Values are to be interpreted little-endian.
-	This header is defined in [tcp_pubsub/src/tcp_header.h](tcp_pubsub/src/tcp_header.h)
+```bash
+projects/autoruntime/scripts/bootstrap_cyclonedds.sh
+projects/autoruntime/scripts/run_test_matrix.sh all
+```
 
-	- 16 bit: Header size
-	- 8 bit: Type
-		- 0 = Regular Payload
-		- 1 = Handshake Message
-	- 8 bit: Reserved
-		- Must be 0
-	- 64bit: Payload size
+The matrix explicitly sets `AUTORUNTIME_ENABLE_DDS=ON` and runs Debug,
+Release, ASan, UBSan, and TSan. See
+[testing.md](docs/testing.md) for revision-pinned logs and the WSL2 TSan launch
+note.
 
-2. **ProtocolHandshakeReq & ProtocolHandshakeResp**
-	The layout of ProtocolHandshakeReq / ProtocolHandshakeResp is the same.  Values are to be interpreted little-endian
-	This message is defined in [tcp_pubsub/src/protocol_handshake_message.h](tcp_pubsub/src/protocol_handshake_message.h)
-	
-	- Message Header (size given in the first 16 bit)
-	- 8 bit: Protocol Version
+## Experiments and evidence
 
-</details>
+Release builds expose:
+
+```bash
+projects/autoruntime/build-verify-release/autoruntime_pipeline_latency_benchmark
+projects/autoruntime/build-verify-release/autoruntime_scheduling_isolation_experiment
+projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
+```
+
+Measured results and raw JSON are in:
+
+- [E2E latency analysis](docs/e2e-latency-analysis.md)
+- [callback-group isolation analysis](docs/scheduling-analysis.md)
+- [DDS QoS analysis](docs/dds-qos-analysis.md)
+- [fault-injection matrix](docs/fault-injection.md)
+- [recovery design and crash test](docs/recovery.md)
+
+## Upstream and attribution
+
+- Primary upstream: `eclipse-ecal/tcp_pubsub`
+- Pinned commit: `1540876ee8aad623a9b089baaf3f948579b466d9`
+- Import commit: `99b2b5d`
+- License: MIT, preserved in [LICENSE](LICENSE)
+- Additional retained notice: `tcp_pubsub/src/portable_endian.h`
+
+The full upstream source, tests, samples, history, and notices remain in the
+tree. AutoRuntime's new modules are separate directories and targets. Exact
+Keep/Rewrite/Add boundaries are in [UPSTREAM_DIFF.md](UPSTREAM_DIFF.md).
+
+## Known limitations
+
+- `HealthMonitor` supplies policy and recovery hooks, not a privileged process
+  supervisor or deployment daemon.
+- FastIPC and DDS adapters currently implement pub/sub only. Runtime services
+  work on `InMemoryTransport`; cross-machine service calls use the separate
+  distributed RPC slice.
+- `Executor::Stop(Deadline)` requests cooperative stop and joins all workers,
+  but the deadline argument is not yet enforced. A callback that ignores its
+  stop token can delay shutdown indefinitely.
+- Priorities order queued jobs inside a callback group; this is not OS
+  real-time scheduling, admission control, CPU affinity, or priority
+  inheritance.
+- Discovery and RPC support numeric IPv4 endpoints and explicit peers. They
+  provide no authentication, encryption, consensus, NAT traversal, or
+  Byzantine protection.
+- Trace and histogram stores are in-process and bounded only where documented;
+  there is no OpenTelemetry exporter or durable metrics backend.
+- WSL2 benchmark numbers are comparative evidence, not target-hardware or hard
+  real-time guarantees.
