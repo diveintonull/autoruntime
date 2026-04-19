@@ -1,25 +1,22 @@
-# Scheduling isolation analysis
+# 调度隔离分析
 
-Date: 2026-08-20
+日期：2026-08-20
 
-## Question
+## 问题
 
-Can a 300 ms planning callback delay a 20 ms control loop, and does assigning
-the two tasks to separate callback groups prevent that interference?
+300 ms 的 planning callback 是否会拖延 20 ms control loop？把两个 task 分配到独立 callback group 能否避免干扰？
 
-## Experiment
+## 实验
 
-`autoruntime_scheduling_isolation_experiment` runs the same workload twice:
+`autoruntime_scheduling_isolation_experiment` 用相同 workload 运行两次：
 
-- a `slow-planning` event callback sleeps for 300 ms;
-- a periodic `control-loop` is released every 20 ms with a 15 ms deadline;
-- both tasks use one worker in the shared scenario;
-- planning and control each use a one-worker callback group in the isolated
-  scenario;
-- control progress is sampled 220 ms into the 300 ms blockage, then final
-  timing samples are collected after the backlog has drained.
+- `slow-planning` event callback sleep 300 ms；
+- periodic `control-loop` 每 20 ms release，deadline 15 ms；
+- shared scenario 中两个 task 共用一个 worker；
+- isolated scenario 中 planning/control 各自使用 one-worker callback group；
+- 在 300 ms 阻塞开始后 220 ms 采样 control progress；backlog drain 后再收集最终 timing sample。
 
-Reproduce it with:
+复现：
 
 ```bash
 cmake --build projects/autoruntime/build-dds-release \
@@ -28,59 +25,42 @@ projects/autoruntime/build-dds-release/autoruntime_scheduling_isolation_experime
   --output projects/autoruntime/docs/evidence/scheduling-isolation-results.json
 ```
 
-The raw evidence is
-[`scheduling-isolation-results.json`](evidence/scheduling-isolation-results.json).
+原始证据：[scheduling-isolation-results.json](evidence/scheduling-isolation-results.json)。
 
-## Result
+## 结果
 
-| Measure | Shared worker group | Isolated worker groups |
+| 指标 | Shared worker group | Isolated worker group |
 | --- | ---: | ---: |
-| Control executions during blocked window | 0 | 11 |
+| 阻塞窗口内 control execution | 0 | 11 |
 | Releases / finished | 21 / 21 | 21 / 21 |
-| Deadline misses | 14 | 0 |
-| Queue overflows | 0 | 0 |
+| Deadline miss | 14 | 0 |
+| Queue overflow | 0 | 0 |
 | Response P50 | 80,162.030 us | 118.924 us |
 | Response P95 | 260,159.457 us | 148.408 us |
 | Response P99 | 280,159.195 us | 179.106 us |
 
-The Release run used the same unpinned WSL2 host documented in
-`e2e-latency-analysis.md`. It is a single run and its microsecond values are
-not portable performance guarantees.
+Release run 使用 `e2e-latency-analysis.md` 中同一台未绑核 WSL2 host。它只有一次 run，microsecond 数值不是可移植性能保证。
 
-## Why priority alone does not help
+## 为什么只提高 priority 没用
 
-The slow event has higher queued priority so that it deterministically starts
-before the first periodic release. Once a callback is running, AutoRuntime
-does not forcibly preempt it. Priority orders jobs waiting in a callback-group
-queue; it cannot interrupt arbitrary user code.
+slow event 使用更高 queued priority，保证它先于第一次 periodic release 开始执行。callback 一旦运行，AutoRuntime 不会强制抢占。priority 只排序 callback-group queue 中等待的 job，无法中断任意 user code。
 
-In the shared scenario, periodic releases continue while the only worker is
-sleeping. They run after planning returns, so 14 responses exceed 15 ms even
-though no queue capacity is lost. A deeper queue preserves old work but does
-not preserve timeliness.
+shared scenario 中，唯一 worker sleep 时 periodic release 继续产生。planning 返回后它们才执行，所以虽无 queue capacity loss，仍有 14 个 response 超过 15 ms。更深 queue 只保留旧 work，不保 timeliness。
 
-In the isolated scenario, the control worker is independently runnable. It
-executes 11 times during the 220 ms observation window, which matches the
-expected cadence after allowing startup phase, and records no deadline miss.
+isolated scenario 中，control worker 可独立运行，在 220 ms observation window 执行 11 次；考虑 startup phase 后符合预期 cadence，且没有 deadline miss。
 
 ## Runtime policy
 
-The experiment supports these deployment rules:
+实验支持以下部署规则：
 
-1. put latency-critical control and safety callbacks in dedicated groups;
-2. keep blocking planning, logging, and service handlers out of those groups;
-3. treat priority as queue ordering, not operating-system preemption;
-4. bound every task/subscription queue and choose whether stale work is useful;
-5. monitor queue delay, response time, deadline misses, and high watermarks;
-6. make long callbacks cooperate with `std::stop_token`, but do not assume
-   cancellation can terminate uncooperative code;
-7. use OS affinity and real-time scheduling only after measuring on the target
-   Linux kernel and hardware.
+1. latency-critical control/safety callback 放入专用 group；
+2. blocking planning、logging、service handler 不得进入这些 group；
+3. priority 只表示 queue ordering，不是 OS preemption；
+4. 限制每个 task/subscription queue，并决定 stale work 是否仍有价值；
+5. 监控 queue delay、response time、deadline miss、high watermark；
+6. long callback 应与 `std::stop_token` 合作，但不能假设 cancellation 能终止不合作代码；
+7. 只有在 target Linux kernel/hardware 上测量后，才使用 OS affinity 与 real-time scheduling。
 
-## Limits
+## 局限
 
-This test uses `sleep_for` to create a repeatable obstruction, not CPU
-contention. It does not measure cache interference, priority inversion in
-external locks, page faults, IRQ load, CPU frequency changes, or RT throttling.
-Those require target-hardware experiments with pinned workers and kernel
-scheduler evidence.
+测试用 `sleep_for` 制造可重复阻塞，不是 CPU contention。它没有测 cache interference、external lock priority inversion、page fault、IRQ load、CPU frequency change 或 RT throttling。这些需要绑核 worker、target hardware 与 kernel scheduler evidence。

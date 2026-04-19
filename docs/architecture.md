@@ -1,132 +1,95 @@
-# AutoRuntime architecture
+# AutoRuntime 架构
 
-## Design intent
+## 设计目标
 
-AutoRuntime separates application semantics, scheduling, transport, recovery,
-observability, and the small distributed control plane. The goal is to make
-ownership and failure behavior inspectable through narrow public seams rather
-than hide them behind a monolithic middleware singleton.
+AutoRuntime 把应用语义、调度、transport、恢复、可观测性和小型 distributed control plane 分开。目标是通过窄而清晰的 public seam，让 ownership 与 failure behavior 可检查，而不是藏在 monolithic middleware singleton 后面。
 
-## Module map
+## 模块地图
 
-| Module | Public seam | Main implementation | Responsibility |
+| 模块 | Public seam | 主要实现 | 职责 |
 | --- | --- | --- | --- |
-| Runtime | `runtime/include/autoruntime/node.hpp` | `runtime/src/node.cpp` | Node-scoped endpoints, subscription/service queues, timers, envelopes |
-| Scheduler | `scheduler/include/autoruntime/executor.hpp` | `scheduler/src/executor.cpp` | task release, priority dispatch, callback groups, cancellation, samples |
-| Transport | `transport/include/autoruntime/transport.hpp` | `transport/src/*` | protocol-neutral pub/sub and request/reply contract |
-| Health | `health/include/autoruntime/health_monitor.hpp` | `health/src/health_monitor.cpp` | state evaluation, generations, restart budget and hooks |
-| Observability | `observability/include/autoruntime/observability.hpp` | `observability/src/observability.cpp` | metrics, JSON logs, spans, process usage |
-| Distributed | `distributed/include/autoruntime/distributed.hpp` | `distributed/src/*` | bounded discovery and framed RPC |
+| Runtime | `runtime/include/autoruntime/node.hpp` | `runtime/src/node.cpp` | Node-scoped endpoint、subscription/service queue、timer、envelope |
+| Scheduler | `scheduler/include/autoruntime/executor.hpp` | `scheduler/src/executor.cpp` | task release、priority dispatch、callback group、cancellation、sample |
+| Transport | `transport/include/autoruntime/transport.hpp` | `transport/src/*` | protocol-neutral pub/sub 与 request/reply contract |
+| Health | `health/include/autoruntime/health_monitor.hpp` | `health/src/health_monitor.cpp` | state evaluation、generation、restart budget、hook |
+| Observability | `observability/include/autoruntime/observability.hpp` | `observability/src/observability.cpp` | metric、JSON log、span、process usage |
+| Distributed | `distributed/include/autoruntime/distributed.hpp` | `distributed/src/*` | bounded discovery 与 framed RPC |
 
-## Data path
+## 数据路径
 
-1. A `Publisher` builds a versioned `MessageEnvelope` with trace/span ids,
-   sequence, monotonic timestamps, source generation, and priority.
-2. The selected `Transport` publishes the message. It owns wire/shared-memory
-   encoding, concrete QoS mapping, and transport counters.
-3. A transport subscription callback calls `Subscriber::Impl::Accept`.
-4. The subscriber applies its own bounded queue and explicit DropNewest or
-   DropOldest policy.
-5. At most one Event task is scheduled for that subscription. `ProcessOne`
-   removes one message, invokes the application callback, then reschedules
-   itself while backlog remains.
-6. Executor samples capture release, queue, execution, response, and deadline
-   timing independently of transport metrics.
+1. `Publisher` 构造 versioned `MessageEnvelope`，带 trace/span id、sequence、monotonic timestamp、source generation 和 priority。
+2. 选定的 `Transport` 发布消息，并负责 wire/shared-memory encoding、具体 QoS mapping 与 transport counter。
+3. transport subscription callback 调用 `Subscriber::Impl::Accept`。
+4. subscriber 应用自己的 bounded queue 与显式 DropNewest/DropOldest policy。
+5. 每个 subscription 最多安排一个 Event task。`ProcessOne` 取出一条消息、执行 application callback；仍有 backlog 时再次安排自己。
+6. Executor 独立于 transport metric，采集 release、queue、execution、response 和 deadline timing。
 
-This two-stage transport/subscription boundary deliberately isolates a slow
-application callback from a transport receive thread.
+这种 transport/subscription 两阶段边界让 slow application callback 不会阻塞 transport receive thread。
 
-## Transport capability matrix
+## Transport 能力矩阵
 
-| Capability | In-memory | FastIPC | Cyclone DDS |
+| 能力 | In-memory | FastIPC | Cyclone DDS |
 | --- | --- | --- | --- |
-| Pub/sub | yes | yes, configured SPSC endpoints | yes |
-| Service/client | yes | unsupported | unsupported |
-| Cross-process | no | same Linux host | DDS domain |
-| Queue/QoS mapping | runtime + local bus | reliable -> bounded timeout; best effort -> drop | reliability/history/deadline/liveliness |
-| Concrete lifetime | shared bus state | receiver `jthread` plus FastIPC channel | participant/readers/writers plus receiver `jthread` |
+| Pub/sub | 支持 | 支持，configured SPSC endpoint | 支持 |
+| Service/client | 支持 | 不支持 | 不支持 |
+| Cross-process | 否 | 同一 Linux host | DDS domain |
+| Queue/QoS mapping | runtime + local bus | reliable -> bounded timeout；best effort -> drop | reliability/history/deadline/liveliness |
+| 具体 lifetime | shared bus state | receiver `jthread` + FastIPC channel | participant/reader/writer + receiver `jthread` |
 
-The common interface exposes service methods so a transport can return typed
-`Unsupported`; it does not pretend every adapter has identical capabilities.
+公共接口暴露 service method，使不具备能力的 transport 返回 typed `Unsupported`，而不是假装所有 adapter 能力相同。
 
-## Scheduler model
+## Scheduler 模型
 
-A scheduler thread releases periodic jobs. Event jobs are released by
-`Notify`; Async jobs release once when added to a running executor. Each
-callback group owns a bounded priority queue and a configured worker set.
-Priority is descending, then release time, then insertion sequence.
+scheduler thread 释放 periodic job；Event job 由 `Notify` 释放；Async job 在加入已经运行的 executor 时释放一次。每个 callback group 拥有 bounded priority queue 和配置好的 worker set。排序依次按 priority 降序、release time、insertion sequence。
 
-Task and group capacity are checked separately. Overflow returns
-`QueueFull` and increments task counters. Cancellation sets a stop source,
-prevents future dispatch, and gives running cooperative callbacks a
-`stop_token`. Finished callbacks retain at most 4096 samples per task.
+task capacity 与 group capacity 分别检查。overflow 返回 `QueueFull` 并增加 task counter。cancellation 设置 stop source、阻止未来 dispatch，并给正在运行的 cooperative callback 提供 `stop_token`。每个 task 最多保留最近 4096 个完成 sample。
 
-## Ownership and lifetime
+## 所有权与生命周期
 
-- The caller owns the shared `Executor` and concrete `Transport`.
-- `Node` keeps shared ownership of both; endpoint handles keep shared PImpls.
-- Subscription and service transport callbacks capture weak endpoint state so
-  callback deregistration does not create a reference cycle.
-- Endpoint destructors call idempotent `Close`/`Cancel`.
-- Executor callback groups and tasks must be configured before `Start` where
-  documented; the executor is one-shot after stopping.
-- Concrete transports mark closed, stop receiver threads, close their substrate,
-  and join before destruction.
+- caller 拥有共享 `Executor` 与 concrete `Transport`。
+- `Node` 对二者保持 shared ownership；endpoint handle 持有 shared PImpl。
+- subscription/service transport callback 只捕获 weak endpoint state，避免 callback deregistration 形成 reference cycle。
+- endpoint destructor 调用幂等 `Close`/`Cancel`。
+- 文档要求的 callback group 与 task 必须在 `Start` 前配置；executor 停止后不能再次启动。
+- concrete transport 先标记 closed、停止 receiver thread、关闭 substrate，最后 join，再进入析构。
 
-## Health and recovery
+## 健康与恢复
 
-`HealthMonitor` stores component state separately from the execution and
-transport objects. It evaluates process liveness, heartbeat freshness, progress,
-backlog, and deadline misses. Updates carry a generation; stale generations
-cannot revive a replacement process. Recovery transitions a failed component
-through `Recovering`, invokes application-owned cleanup/start/reconnect hooks
-outside the monitor lock, advances the generation, and returns to `Starting`
-until heartbeat/progress establish `Running`.
+`HealthMonitor` 的 component state 与 execution/transport object 分离。它评估 process liveness、heartbeat freshness、progress、backlog 和 deadline miss。每次 update 携带 generation；stale generation 不能复活 replacement process。恢复会让失败 component 进入 `Recovering`，在 monitor lock 外执行 application-owned cleanup/start/reconnect hook，推进 generation，再进入 `Starting`，直至新的 heartbeat/progress 证明 `Running`。
 
-See [recovery.md](recovery.md) for the verified SIGKILL flow.
+已验证的 SIGKILL 流程见 [recovery.md](recovery.md)。
 
-## Observability
+## 可观测性
 
-Scheduler samples, subscription stats, transport stats, health transitions,
-metrics, structured logs, trace spans, and process resource usage remain
-separate data products. The benchmark composes three spans per trace to derive
-sensor-to-control latency; it does not infer latency from wall-clock log
-timestamps.
+scheduler sample、subscription stat、transport stat、health transition、metric、structured log、trace span 和 process resource usage 是彼此独立的数据产品。benchmark 为每个 trace 组合三个 span 来推导 sensor-to-control latency，而不是从 wall-clock log timestamp 猜测延迟。
 
 ## Distributed control plane
 
-Discovery sends versioned UDP announcements to an explicit bounded peer list.
-Records are keyed by node id and fenced by generation plus heartbeat sequence;
-leases remove silent members. RPC uses a size-bounded versioned TCP frame,
-nonblocking I/O, monotonic deadlines, cancellation polling, and typed response
-status.
+discovery 向显式 bounded peer list 发送 versioned UDP announcement。record 按 node id 索引，并由 generation + heartbeat sequence fencing；lease 会移除沉默成员。RPC 使用 size-bounded versioned TCP frame、nonblocking I/O、monotonic deadline、cancellation polling 与 typed response status。
 
-The distributed slice is intentionally not a general cluster manager.
+该 distributed slice 有意不做通用 cluster manager。
 
-## Shutdown order
+## Shutdown 顺序
 
-A safe application shutdown is:
+安全的应用 shutdown：
 
-1. stop new publication and timers;
-2. close subscriptions/services so their transport callbacks are removed;
-3. request executor stop and let cooperative callbacks return;
-4. close concrete transports and join receiver threads;
-5. stop discovery/RPC and persist final metrics if desired.
+1. 停止新的 publication 与 timer；
+2. 关闭 subscription/service，使 transport callback 注销；
+3. 请求 executor stop，让 cooperative callback 返回；
+4. 关闭 concrete transport 并 join receiver thread；
+5. 停止 discovery/RPC，并按需持久化最终 metric。
 
-`Executor::Stop` currently joins without enforcing its supplied deadline, so
-applications must keep callbacks cooperative.
+`Executor::Stop` 目前 join 时不会执行传入 deadline，因此应用必须保证 callback 合作退出。
 
-## Invariants
+## 不变量
 
-- A Node generation is nonzero and accompanies every published envelope.
-- Subscription queues and callback-group queues are bounded.
-- Transport callbacks never own application endpoint lifetime strongly.
-- A stale health generation cannot mutate current state.
-- Discovery membership and RPC frames have explicit size bounds.
-- Imported `tcp_pubsub` is excluded from the default AutoRuntime target.
+- Node generation 非零，并随每个 published envelope 传递。
+- subscription queue 与 callback-group queue 都有上界。
+- transport callback 不得强持有 application endpoint lifetime。
+- stale health generation 不得修改 current state。
+- discovery membership 与 RPC frame 具有显式 size bound。
+- 导入的 `tcp_pubsub` 不进入默认 AutoRuntime target。
 
-## Non-goals
+## 非目标
 
-This implementation does not provide hard real-time scheduling, zero-copy DDS
-loans, a process-manager daemon, secure discovery, distributed consensus,
-schema evolution beyond the current envelope, or ROS 2 API compatibility.
+本实现不提供 hard real-time scheduling、zero-copy DDS loan、process-manager daemon、secure discovery、distributed consensus、当前 envelope 之外的 schema evolution 或 ROS 2 API compatibility。

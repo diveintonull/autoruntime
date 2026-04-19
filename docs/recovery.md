@@ -1,6 +1,6 @@
-# Health and recovery design
+# 健康管理与恢复设计
 
-## State model
+## 状态模型
 
 ```text
 STARTING --heartbeat/progress--> RUNNING
@@ -12,110 +12,79 @@ RECOVERING --hooks succeed----> STARTING (generation + 1)
 RECOVERING --hook/timeout-----> FAILED
 ```
 
-`HealthState` and `HealthReason` are separate. A component can therefore be
-`FAILED/ProcessExited`, `FAILED/HeartbeatLost`, or
-`DEGRADED/BacklogExceeded` without encoding reason in free-form text.
+`HealthState` 与 `HealthReason` 分离。因此 component 可以表达 `FAILED/ProcessExited`、`FAILED/HeartbeatLost` 或 `DEGRADED/BacklogExceeded`，无需把 reason 塞进自由文本。
 
-## Detection
+## 检测
 
-`Evaluate` first snapshots probe requests under the monitor mutex, executes
-the possibly blocking process probes without that mutex, and then applies
-results only when PID and generation still match. Evaluation order is:
+`Evaluate` 先在 monitor mutex 下 snapshot probe request，释放 mutex 后执行可能阻塞的 process probe，最后仅在 PID 与 generation 仍匹配时应用结果。评估顺序：
 
-1. process exit;
-2. recovery timeout;
-3. heartbeat timeout;
-4. no-progress timeout;
-5. backlog bound;
-6. deadline-miss bound;
-7. degraded-to-running recovery.
+1. process exit；
+2. recovery timeout；
+3. heartbeat timeout；
+4. no-progress timeout；
+5. backlog bound；
+6. deadline-miss bound；
+7. degraded-to-running recovery。
 
-Heartbeat and progress sequences must increase. Every update carries the
-registered generation; old or unregistered future generations return
-`StaleGeneration`.
+heartbeat 与 progress sequence 必须递增。每次 update 都携带 registered generation；旧 generation 或未注册的 future generation 返回 `StaleGeneration`。
 
 ## Recovery transaction
 
-`Recover` accepts only a `Failed` component with remaining restart budget.
-It reserves the next generation and changes state to `Recovering` under the
-monitor lock. It then invokes three application-owned hooks outside the lock:
+`Recover` 只接受仍有 restart budget 的 `Failed` component。它在 monitor lock 下预留 next generation，并把状态改为 `Recovering`，然后在 lock 外执行三个 application-owned hook：
 
 1. `cleanup(name, old_generation)`
-2. wait the configured restart backoff
+2. 等待 configured restart backoff
 3. `start(name, new_generation) -> pid`
 4. `reconnect(name, new_generation)`
 
-Failures are caught and converted to typed status. A failed reconnect triggers
-best-effort cleanup of the replacement generation. Success commits only if the
-component still has the old generation and remains `Recovering`; otherwise it
-returns `StaleGeneration`. The component enters `Starting` with cleared
-heartbeat/progress/backlog/deadline counters.
+异常会被捕获并转换为 typed status。reconnect 失败会对 replacement generation 尽力 cleanup。只有 component 仍持有 old generation 且仍为 `Recovering` 时才能 commit success，否则返回 `StaleGeneration`。component 随后以清空的 heartbeat/progress/backlog/deadline counter 进入 `Starting`。
 
-The monitor does not fork processes itself. Hook ownership keeps deployment
-policy outside the reusable state machine.
+monitor 不自行 fork process。hook ownership 把 deployment policy 留在可复用 state machine 之外。
 
-## Real SIGKILL and data-flow test
+## 真实 SIGKILL 与数据流测试
 
-`tests/fastipc_transport_test.cpp` performs a complete same-host recovery:
+`tests/fastipc_transport_test.cpp` 执行完整同机恢复：
 
-1. the parent creates a FastIPC publisher as camera generation 9;
-2. an exec'd child creates the planning subscriber at generation 7;
-3. `before-crash` crosses shared memory and its envelope is checked;
-4. the parent sends `SIGKILL` and reaps the child;
-5. `HealthMonitor::Evaluate` observes
-   `FAILED/ProcessExited`;
-6. recovery hooks start a new exec'd child at generation 8;
-7. reconnect publishes `after-restart`;
-8. the replacement proves receiver generation 8, source generation 9,
-   sequence 2, payload, and a nonzero trace id;
-9. heartbeat and progress for generation 8 return health to `RUNNING`;
-10. the replacement and publisher close cleanly.
+1. parent 创建 camera generation 9 的 FastIPC publisher；
+2. exec 出来的 child 创建 planning generation 7 subscriber；
+3. `before-crash` 通过 shared memory，且 envelope 得到校验；
+4. parent 发送 `SIGKILL` 并 reap child；
+5. `HealthMonitor::Evaluate` 观察到 `FAILED/ProcessExited`；
+6. recovery hook 启动 generation 8 的新 exec child；
+7. reconnect 发布 `after-restart`；
+8. replacement 证明 receiver generation 8、source generation 9、sequence 2、payload 与非零 trace id；
+9. generation 8 的 heartbeat 与 progress 让 health 回到 `RUNNING`；
+10. replacement 与 publisher 干净关闭。
 
-The Release test was repeated ten times; the captured result is
-[evidence/recovery-repeat-10.log](evidence/recovery-repeat-10.log).
+Release test 连续运行十次，结果见 [evidence/recovery-repeat-10.log](evidence/recovery-repeat-10.log)。
 
-## Bug found by the test
+## 测试发现的真实缺陷
 
-The first stronger version restored the message flow but the replacement
-occasionally crashed during shutdown. ASan reported a read after
-`munmap`: the FastIPC receiver thread was still unwinding a blocked
-`Receive` while another thread's `Close` released the mapping.
+更强的第一版测试恢复了消息流，但 replacement 偶尔在 shutdown 时崩溃。ASan 报告 `munmap` 后读取：FastIPC receiver thread 仍在从 blocked `Receive` 展开调用栈，另一线程的 `Close` 已释放 mapping。
 
-Commit `2bdd95f` fixed the substrate with an in-process operation lease:
+commit `31b2107` 用 in-process operation lease 修复 substrate：
 
-1. closure rejects new leases;
-2. both futex epochs are incremented and woken;
-3. active operations observe `Closed` and release leases;
-4. `Close` waits for the active count to reach zero;
-5. role metadata, mapping, and fd are released last.
+1. closure 拒绝新 lease；
+2. 两个 futex epoch 都递增并 wake；
+3. active operation 观察 `Closed`，随后释放 lease；
+4. `Close` 等待 active count 归零；
+5. 最后才释放 role metadata、mapping 与 fd。
 
-FastIPC now has a direct
-`LocalCloseWaitsForBlockedOperationBeforeUnmapping` regression, and the
-AutoRuntime crash/restart test exercises the full adapter lifecycle. All five
-sanitizer/build profiles pass with this fix.
+FastIPC 现有直接 regression `LocalCloseWaitsForBlockedOperationBeforeUnmapping`；AutoRuntime crash/restart test 覆盖完整 adapter lifecycle。修复后五种 sanitizer/build profile 全部通过。
 
-## Ownership and concurrency
+## 所有权与并发
 
-- `HealthMonitor` owns only state, policy, transition history, and the probe
-  callable.
-- Application/deployment code owns process handles and hook side effects.
-- Hooks never run while the monitor mutex is held.
-- A generation is the logical incarnation fence; a PID is only a liveness
-  observation.
-- FastIPC independently fences substrate roles with PID, process start ticks,
-  channel generation, and role token.
-- Recovery is synchronous in this slice. A production supervisor would run it
-  on a dedicated control-plane executor.
+- `HealthMonitor` 只拥有 state、policy、transition history 和 probe callable。
+- application/deployment code 拥有 process handle 与 hook side effect。
+- monitor mutex 持有期间绝不运行 hook。
+- generation 是 logical incarnation fence；PID 只是一项 liveness observation。
+- FastIPC 还独立使用 PID、process start tick、channel generation、role token 对 substrate role fencing。
+- 本切片的 recovery 同步执行；生产 supervisor 应放在专用 control-plane executor。
 
-## Limits
+## 局限
 
-- No process daemon, cgroup/systemd integration, exponential backoff, rolling
-  restart, dependency graph, or persisted restart budget.
-- A hook can block past the caller deadline because C++ cannot preempt an
-  arbitrary synchronous function. Deadlines are checked between hook stages.
-- Process probing uses `kill(pid, 0)` by default and does not by itself fence
-  PID reuse; generation and the FastIPC substrate's start-tick checks carry
-  that responsibility in the verified path.
-- Recovery establishes `Starting`, not immediate health. Fresh heartbeat and
-  progress are required.
-- No multi-node leader election or exactly-once restart semantics.
+- 没有 process daemon、cgroup/systemd integration、exponential backoff、rolling restart、dependency graph 或持久化 restart budget。
+- hook 可能阻塞超过 caller deadline，因为 C++ 不能抢占任意 synchronous function；deadline 只在 hook stage 之间检查。
+- 默认 process probe 使用 `kill(pid, 0)`，本身不能防 PID reuse；验证路径依靠 generation 和 FastIPC start-tick check。
+- recovery 只建立 `Starting`，不代表立即健康；必须收到 fresh heartbeat 与 progress。
+- 没有 multi-node leader election 或 exactly-once restart semantics。
