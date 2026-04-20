@@ -97,6 +97,7 @@ namespace {
   result.p50 = Percentile(values, 0.50);
   result.p95 = Percentile(values, 0.95);
   result.p99 = Percentile(values, 0.99);
+  result.p99_9 = Percentile(values, 0.999);
   return result;
 }
 
@@ -243,6 +244,8 @@ std::vector<MetricSample> MetricsRegistry::Snapshot() const {
         sample.distribution.p50 = Percentile(retained, 0.50);
         sample.distribution.p95 = Percentile(retained, 0.95);
         sample.distribution.p99 = Percentile(retained, 0.99);
+        sample.distribution.p99_9 =
+            Percentile(retained, 0.999);
       }
       snapshot.push_back(std::move(sample));
     }
@@ -277,7 +280,8 @@ std::string MetricsRegistry::RenderJson() const {
              << ",\"mean\":" << sample.distribution.mean
              << ",\"p50\":" << sample.distribution.p50
              << ",\"p95\":" << sample.distribution.p95
-             << ",\"p99\":" << sample.distribution.p99;
+             << ",\"p99\":" << sample.distribution.p99
+             << ",\"p99_9\":" << sample.distribution.p99_9;
     } else {
       output << ",\"value\":" << sample.value;
     }

@@ -15,6 +15,17 @@ set(AUTORUNTIME_CYCLONEDDS_ROOT
 option(AUTORUNTIME_BUILD_TCP_BASELINE
        "Build the imported tcp_pubsub baseline target" OFF)
 
+set(AUTORUNTIME_SOURCE_REVISION "unknown")
+find_package(Git QUIET)
+if(Git_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short=12 HEAD
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE AUTORUNTIME_SOURCE_REVISION
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+endif()
+
 set(AUTORUNTIME_SANITIZER "" CACHE STRING
     "Runtime sanitizer: ASan, UBSan, TSan, or empty")
 set_property(CACHE AUTORUNTIME_SANITIZER PROPERTY STRINGS
@@ -81,6 +92,7 @@ endif()
 
 add_library(autoruntime STATIC
   scheduler/src/executor.cpp
+  scheduler/src/realtime_mutex.cpp
   runtime/src/node.cpp
   health/src/health_monitor.cpp
   observability/src/observability.cpp
@@ -132,6 +144,22 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     PRIVATE AutoRuntime::autoruntime Threads::Threads)
   autoruntime_enable_warnings(autoruntime_executor_test)
   add_test(NAME autoruntime.executor COMMAND autoruntime_executor_test)
+  add_test(NAME autoruntime.realtime.thread_scheduling
+    COMMAND autoruntime_executor_test --case thread_scheduling)
+  add_test(NAME autoruntime.realtime.deadline_policy
+    COMMAND autoruntime_executor_test --case deadline_policy)
+  add_test(NAME autoruntime.realtime.absolute_release
+    COMMAND autoruntime_executor_test --case absolute_release)
+  add_test(NAME autoruntime.realtime.priority_inheritance
+    COMMAND autoruntime_executor_test --case priority_inheritance)
+  set_tests_properties(
+    autoruntime.realtime.thread_scheduling
+    autoruntime.realtime.deadline_policy
+    PROPERTIES LABELS "realtime;fault")
+  set_tests_properties(
+    autoruntime.realtime.absolute_release
+    autoruntime.realtime.priority_inheritance
+    PROPERTIES LABELS realtime)
 
   add_executable(autoruntime_runtime_api_test tests/runtime_api_test.cpp)
   target_link_libraries(autoruntime_runtime_api_test
@@ -234,6 +262,28 @@ if(AUTORUNTIME_BUILD_BENCHMARKS AND AUTORUNTIME_ENABLE_DDS)
   target_link_libraries(autoruntime_dds_qos_experiment
     PRIVATE AutoRuntime::autoruntime Threads::Threads)
   autoruntime_enable_warnings(autoruntime_dds_qos_experiment)
+endif()
+
+if(AUTORUNTIME_BUILD_BENCHMARKS AND UNIX)
+  add_executable(autoruntime_realtime_scheduling_benchmark
+    benchmarks/realtime_scheduling_benchmark.cpp)
+  target_link_libraries(autoruntime_realtime_scheduling_benchmark
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  target_compile_definitions(
+    autoruntime_realtime_scheduling_benchmark PRIVATE
+    AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}")
+  autoruntime_enable_warnings(
+    autoruntime_realtime_scheduling_benchmark)
+
+  add_executable(autoruntime_priority_inversion_experiment
+    benchmarks/priority_inversion_experiment.cpp)
+  target_link_libraries(autoruntime_priority_inversion_experiment
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  target_compile_definitions(
+    autoruntime_priority_inversion_experiment PRIVATE
+    AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}")
+  autoruntime_enable_warnings(
+    autoruntime_priority_inversion_experiment)
 endif()
 
 if(AUTORUNTIME_BUILD_BENCHMARKS)

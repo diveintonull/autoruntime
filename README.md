@@ -8,14 +8,14 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 | 领域 | 当前行为 |
 | --- | --- |
 | Runtime API | `Node`、`Publisher`、`Subscriber`、`Service`、`Client`、`Timer`、`Executor`、`Transport`、`HealthMonitor` |
-| 调度 | Periodic、Event、Async task；priority queue；callback group；bounded queue；cooperative cancellation；deadline/queue/execution sample |
+| 调度 | Periodic、Event、Async task；有界优先级队列；callback group；配置化 CPU affinity；可选 `SCHED_FIFO` 与显式权限降级；绝对周期释放；Warn/Degrade/Drop；P50/P95/P99/P99.9/MAX |
 | Pub/sub | 每 subscription 独立 queue、DropNewest/DropOldest overflow、slow-callback isolation、versioned message envelope |
 | Service | in-memory transport 上的 deadline-bounded request/reply；bounded service queue |
 | Transport | in-memory、FastIPC shared memory，以及可选的真实 Cyclone DDS 11.0.1 adapter |
 | 恢复 | heartbeat、progress、backlog、deadline miss、process exit evaluation；generation-aware cleanup/start/reconnect hook |
 | 可观测性 | counter、gauge、bounded histogram、JSON log、trace span、E2E latency、CPU/RSS/context-switch snapshot |
 | 分布式切片 | 带 bounded membership 与 lease expiry 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
-| 验证 | 默认 26-test build；完整 28-test DDS build 在 Debug/Release/ASan/UBSan/TSan 下通过；20 个命名 runtime fault case |
+| 验证 | 轻依赖构建 30/30；完整 DDS 构建在 Debug/Release/ASan/UBSan/TSan 下均为 32/32；另注册 4 个可独立运行的实时调度用例 |
 
 ## 架构
 
@@ -47,7 +47,7 @@ cmake --build projects/autoruntime/build
 ctest --test-dir projects/autoruntime/build --output-on-failure
 ```
 
-DDS 默认为关闭，因此上述命令只需要 CMake、Ninja、C++20 compiler、pthreads 和相邻 FastIPC 项目。已验证的默认 build 注册 26 个测试，并通过 26/26。
+DDS 默认为关闭，因此上述命令只需要 CMake、Ninja、C++20 compiler、pthreads 和相邻 FastIPC 项目。当前轻依赖构建注册 30 个测试，并通过 30/30。
 
 运行 sensor -> planning -> control 示例：
 
@@ -73,6 +73,8 @@ Release build 提供以下程序：
 ```bash
 projects/autoruntime/build-verify-release/autoruntime_pipeline_latency_benchmark
 projects/autoruntime/build-verify-release/autoruntime_scheduling_isolation_experiment
+projects/autoruntime/build-verify-release/autoruntime_realtime_scheduling_benchmark
+projects/autoruntime/build-verify-release/autoruntime_priority_inversion_experiment
 projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
 ```
 
@@ -80,6 +82,9 @@ projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
 
 - [E2E latency 分析](docs/e2e-latency-analysis.md)
 - [callback-group isolation 分析](docs/scheduling-analysis.md)
+- [实时感知调度设计](docs/realtime-scheduling.md)
+- [实时调度基准](docs/realtime-scheduling-benchmark.md)
+- [优先级反转实验](docs/priority-inversion.md)
 - [DDS QoS 分析](docs/dds-qos-analysis.md)
 - [故障注入矩阵](docs/fault-injection.md)
 - [恢复设计与 crash test](docs/recovery.md)
@@ -99,7 +104,8 @@ projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
 - `HealthMonitor` 提供 policy 与 recovery hook，不是 privileged process supervisor 或 deployment daemon。
 - FastIPC 与 DDS adapter 目前只实现 pub/sub。runtime service 使用 `InMemoryTransport`；跨机器 service call 使用独立 distributed RPC slice。
 - `Executor::Stop(Deadline)` 会请求 cooperative stop 并 join 所有 worker，但尚未执行传入的 deadline。忽略 stop token 的 callback 可无限拖延 shutdown。
-- priority 只决定 callback group 内 queued job 的顺序，不等于 OS real-time scheduling、admission control、CPU affinity 或 priority inheritance。
+- task priority 只决定 callback group 内已排队 job 的顺序；worker 的 CPU affinity 与可选 `SCHED_FIFO` 是另一层配置，仍不提供 callback 抢占、准入控制或 WCET 证明。
+- 实时配置当前只覆盖 Executor scheduler 与 callback-group worker；FastIPC/DDS receiver、HealthMonitor、Discovery、RPC 线程尚未纳入。普通用户请求 `SCHED_FIFO` 时通常因 `EPERM` 回退，实际状态可查询。
 - discovery 与 RPC 只支持 numeric IPv4 endpoint 和 explicit peer，不提供 authentication、encryption、consensus、NAT traversal 或 Byzantine protection。
 - trace 与 histogram store 位于进程内，只在文档明确处有上界；没有 OpenTelemetry exporter 或 durable metrics backend。
 - WSL2 benchmark 仅是比较证据，不代表 target-hardware 或 hard real-time guarantee。

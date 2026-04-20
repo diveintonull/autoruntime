@@ -87,8 +87,8 @@ void AddExecutorMetrics(autoruntime::MetricsRegistry& metrics,
           "executor.response_time_us",
           static_cast<double>(sample.response_time.count()) / 1000.0));
       static_cast<void>(metrics.Observe(
-          "executor.release_lateness_us",
-          static_cast<double>(sample.release_lateness.count()) / 1000.0));
+          "executor.release_jitter_us",
+          static_cast<double>(sample.release_jitter.count()) / 1000.0));
     }
   }
   static_cast<void>(metrics.IncrementCounter(
@@ -114,7 +114,8 @@ void WriteDistribution(std::ostream& output,
          << ",\"mean_us\":" << summary.mean
          << ",\"p50_us\":" << summary.p50
          << ",\"p95_us\":" << summary.p95
-         << ",\"p99_us\":" << summary.p99 << '}';
+         << ",\"p99_us\":" << summary.p99
+         << ",\"p99_9_us\":" << summary.p99_9 << '}';
 }
 
 struct BenchmarkResult {

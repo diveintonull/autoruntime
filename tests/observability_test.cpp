@@ -62,10 +62,12 @@ int MetricsHaveStableKindsAndPercentiles() {
   CHECK(Near(histogram->distribution.p50, 50.0));
   CHECK(Near(histogram->distribution.p95, 95.0));
   CHECK(Near(histogram->distribution.p99, 99.0));
+  CHECK(Near(histogram->distribution.p99_9, 100.0));
 
   const auto json = metrics.RenderJson();
   CHECK(json.find("\"pipeline.e2e_latency_us\"") != std::string::npos);
   CHECK(json.find("\"p99\":99") != std::string::npos);
+  CHECK(json.find("\"p99_9\":100") != std::string::npos);
   return 0;
 }
 

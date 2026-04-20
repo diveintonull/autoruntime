@@ -28,6 +28,7 @@ struct DistributionSummary {
   double p50{0.0};
   double p95{0.0};
   double p99{0.0};
+  double p99_9{0.0};
 };
 
 struct MetricSample {
