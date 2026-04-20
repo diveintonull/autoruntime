@@ -74,3 +74,15 @@ projects/autoruntime/build-verify-release/autoruntime_priority_inversion_experim
 - PI 不能缩短临界区，也不能解决 I/O、page fault、allocator、IRQ 或回调自身超时。
 - PI 会增加 mutex 内核 bookkeeping；短临界区是否值得启用需要实测。
 - 本项目提供 real-time-aware 优化，不提供 WCET、准入控制或 hard real-time 保证。
+
+## 7. 本机精确结果
+
+- 实现提交：`0c0935c63b40e8919bd10333ff0be4cace524d77`
+- 原始 JSON：[priority-inversion-2026-08-21-0c0935c63b40.json](evidence/priority-inversion-2026-08-21-0c0935c63b40.json)
+- SHA-256：`9c42cecb8adad308b237c8d578bfd0ffe2bd74b4d62d3b94ddc99f35e342120b`
+- CPU affinity：两轮三条线程均生效；
+- PI mutex：ON 轮确认 `priority_inheritance_active=true`；
+- FIFO：六次 `pthread_setschedparam` 均返回 `EPERM(1)`，实际策略为 default；
+- 最终判定：`comparison_valid=false`，经典 PI 性能对比 **INCOMPLETE**。
+
+JSON 中 OFF/ON 的 `high_blocking_us` 分别为 16234.317 与 27797.037 µs，但两组线程都没有进入 `SCHED_FIFO`，所以这些只是 CFS 调度下的诊断值，不能用于推导 PI 的收益、退化或百分比。

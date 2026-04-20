@@ -1,0 +1,37 @@
+{
+  "source_revision": "0c0935c63b40",
+  "target_cpu": 0,
+  "low_priority": 10,
+  "medium_priority": 20,
+  "high_priority": 30,
+  "low_critical_ms": 20,
+  "medium_busy_ms": 100,
+  "comparison_valid": false,
+  "invalid_reason": "SCHED_FIFO and affinity must apply to all three threads; ordinary-user fallback is not a PI result",
+  "trials": [
+    {
+      "priority_inheritance_requested": false,
+      "priority_inheritance_active": false,
+      "priority_inheritance_error": 0,
+      "fifo_applied": false,
+      "affinity_applied": true,
+      "measurement_valid": false,
+      "high_blocking_us": 16234.317,
+      "low_critical_us": 20902.387,
+      "medium_busy_us": 100002.009,
+      "threads": [{"role":"low","requested_priority":10,"effective_policy":"default","effective_priority":0,"affinity_applied":true,"scheduler_applied":false,"scheduler_error":1,"detail":"pthread_setschedparam failed: Operation not permitted (1)"},{"role":"medium","requested_priority":20,"effective_policy":"default","effective_priority":0,"affinity_applied":true,"scheduler_applied":false,"scheduler_error":1,"detail":"pthread_setschedparam failed: Operation not permitted (1)"},{"role":"high","requested_priority":30,"effective_policy":"default","effective_priority":0,"affinity_applied":true,"scheduler_applied":false,"scheduler_error":1,"detail":"pthread_setschedparam failed: Operation not permitted (1)"}]
+    },
+    {
+      "priority_inheritance_requested": true,
+      "priority_inheritance_active": true,
+      "priority_inheritance_error": 0,
+      "fifo_applied": false,
+      "affinity_applied": true,
+      "measurement_valid": false,
+      "high_blocking_us": 27797.037,
+      "low_critical_us": 24202.047,
+      "medium_busy_us": 100004.341,
+      "threads": [{"role":"low","requested_priority":10,"effective_policy":"default","effective_priority":0,"affinity_applied":true,"scheduler_applied":false,"scheduler_error":1,"detail":"pthread_setschedparam failed: Operation not permitted (1)"},{"role":"medium","requested_priority":20,"effective_policy":"default","effective_priority":0,"affinity_applied":true,"scheduler_applied":false,"scheduler_error":1,"detail":"pthread_setschedparam failed: Operation not permitted (1)"},{"role":"high","requested_priority":30,"effective_policy":"default","effective_priority":0,"affinity_applied":true,"scheduler_applied":false,"scheduler_error":1,"detail":"pthread_setschedparam failed: Operation not permitted (1)"}]
+    }
+  ]
+}

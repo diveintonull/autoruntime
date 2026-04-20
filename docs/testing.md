@@ -1,13 +1,13 @@
 # 构建与验证矩阵
 
-日期：2026-08-20
+日期：2026-08-21
 提交身份改写导致当前提交 ID 与原始证据目录中的旧 ID 不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。原始测试日志未改写。
 
 ## 已验证 revision 与 host
 
 | 字段 | 值 |
 | --- | --- |
-| 完整矩阵 revision | `fc8150d88226a68392105cd6e071f8073acc0353f` |
+| 完整矩阵 revision | `0c0935c63b40e8919bd10333ff0be4cace524d77` |
 | Host | WSL2 下 Ubuntu 24.04.4 |
 | Kernel | `6.6.87.2-microsoft-standard-WSL2` |
 | Architecture | x86_64 |
@@ -26,7 +26,7 @@ cmake --build projects/autoruntime/build
 ctest --test-dir projects/autoruntime/build --output-on-failure
 ```
 
-DDS 默认关闭。全新的 Debug directory 构建全部默认 target，并通过 26/26：[原始日志](evidence/test-default.log)。它包含 FastIPC、distributed socket、19 个 non-DDS fault case，以及可运行 pipeline example。
+DDS 默认关闭。全新的 Debug directory 构建全部默认 target，并通过 30/30：[精确提交日志](evidence/test-default-0c0935c63b40.log)。它包含 FastIPC、distributed socket、21 个标记为 `fault` 的 non-DDS/realtime failure case，以及可运行 pipeline example。
 
 ## 完整本地命令
 
@@ -44,13 +44,13 @@ projects/autoruntime/scripts/run_test_matrix.sh all
 
 | Profile | 配置 | 结果 | 原始日志 |
 | --- | --- | ---: | --- |
-| Debug | FastIPC + Cyclone DDS 11.0.1 | 28/28 | [日志](evidence/test-debug.log) |
-| Release | FastIPC + Cyclone DDS 11.0.1 | 28/28 | [日志](evidence/test-release.log) |
-| ASan | Debug，address + leak check | 28/28 | [日志](evidence/test-asan.log) |
-| UBSan | Debug，首个 UB 即停止 | 28/28 | [日志](evidence/test-ubsan.log) |
-| TSan | Debug，首个 race/deadlock report 即停止 | 28/28 | [日志](evidence/test-tsan.log) |
+| Debug | FastIPC + Cyclone DDS 11.0.1 | 32/32 | [日志](evidence/test-debug-0c0935c63b40.log) |
+| Release | FastIPC + Cyclone DDS 11.0.1 | 32/32 | [日志](evidence/test-release-0c0935c63b40.log) |
+| ASan | Debug，address + leak check | 32/32 | [日志](evidence/test-asan-0c0935c63b40.log) |
+| UBSan | Debug，首个 UB 即停止 | 32/32 | [日志](evidence/test-ubsan-0c0935c63b40.log) |
+| TSan | Debug，首个 race/deadlock report 即停止 | 32/32 | [日志](evidence/test-tsan-0c0935c63b40.log) |
 
-五个 profile 共执行 140/140 个 registered CTest entry。每个 profile 包含 20 个独立命名 fault case。真实 FastIPC SIGKILL/restart/data-flow test 还连续通过十次 Release：[重复日志](evidence/recovery-repeat-10.log)。
+五个 profile 共执行 160/160 个 registered CTest entry。每个 profile 包含 22 个标记为 `fault` 的独立用例，其中两个同时验证 realtime 配置/降级行为。真实 FastIPC SIGKILL/restart/data-flow test 还连续通过十次 Release：[重复日志](evidence/recovery-repeat-10.log)。
 
 compiler warning 使用 `-Wall -Wextra -Wpedantic -Wconversion -Wsign-conversion`；记录的 build 无 warning。
 

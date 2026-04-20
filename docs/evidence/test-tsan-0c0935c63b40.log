@@ -1,0 +1,78 @@
+[OUTPUT]
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+[HANDLER_OUTPUT]
+Test project /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+      Start  1: autoruntime.executor
+ 1/32 Test  #1: autoruntime.executor ........................   Passed    0.59 sec
+      Start  2: autoruntime.realtime.thread_scheduling
+ 2/32 Test  #2: autoruntime.realtime.thread_scheduling ......   Passed    0.01 sec
+      Start  3: autoruntime.realtime.deadline_policy
+ 3/32 Test  #3: autoruntime.realtime.deadline_policy ........   Passed    0.04 sec
+      Start  4: autoruntime.realtime.absolute_release
+ 4/32 Test  #4: autoruntime.realtime.absolute_release .......   Passed    0.13 sec
+      Start  5: autoruntime.realtime.priority_inheritance
+ 5/32 Test  #5: autoruntime.realtime.priority_inheritance ...   Passed    0.01 sec
+      Start  6: autoruntime.runtime_api
+ 6/32 Test  #6: autoruntime.runtime_api .....................   Passed    0.13 sec
+      Start  7: autoruntime.health_monitor
+ 7/32 Test  #7: autoruntime.health_monitor ..................   Passed    0.02 sec
+      Start  8: autoruntime.observability
+ 8/32 Test  #8: autoruntime.observability ...................   Passed    0.01 sec
+      Start  9: autoruntime.fastipc_transport
+ 9/32 Test  #9: autoruntime.fastipc_transport ...............   Passed    0.05 sec
+      Start 10: autoruntime.dds_transport
+10/32 Test #10: autoruntime.dds_transport ...................   Passed    0.08 sec
+      Start 11: autoruntime.distributed
+11/32 Test #11: autoruntime.distributed .....................   Passed    0.50 sec
+      Start 12: autoruntime.fault.transport_closed
+12/32 Test #12: autoruntime.fault.transport_closed ..........   Passed    0.01 sec
+      Start 13: autoruntime.fault.queue_overflow
+13/32 Test #13: autoruntime.fault.queue_overflow ............   Passed    0.01 sec
+      Start 14: autoruntime.fault.slow_callback_isolation
+14/32 Test #14: autoruntime.fault.slow_callback_isolation ...   Passed    0.31 sec
+      Start 15: autoruntime.fault.deadline_miss
+15/32 Test #15: autoruntime.fault.deadline_miss .............   Passed    0.02 sec
+      Start 16: autoruntime.fault.cancelled_task
+16/32 Test #16: autoruntime.fault.cancelled_task ............   Passed    0.01 sec
+      Start 17: autoruntime.fault.heartbeat_loss
+17/32 Test #17: autoruntime.fault.heartbeat_loss ............   Passed    0.01 sec
+      Start 18: autoruntime.fault.no_progress
+18/32 Test #18: autoruntime.fault.no_progress ...............   Passed    0.01 sec
+      Start 19: autoruntime.fault.backlog_degraded
+19/32 Test #19: autoruntime.fault.backlog_degraded ..........   Passed    0.01 sec
+      Start 20: autoruntime.fault.process_exit
+20/32 Test #20: autoruntime.fault.process_exit ..............   Passed    0.01 sec
+      Start 21: autoruntime.fault.stale_generation
+21/32 Test #21: autoruntime.fault.stale_generation ..........   Passed    0.01 sec
+      Start 22: autoruntime.fault.rpc_disconnect
+22/32 Test #22: autoruntime.fault.rpc_disconnect ............   Passed    0.01 sec
+      Start 23: autoruntime.fault.rpc_corrupt_frame
+23/32 Test #23: autoruntime.fault.rpc_corrupt_frame .........   Passed    0.03 sec
+      Start 24: autoruntime.fault.duplicate_membership
+24/32 Test #24: autoruntime.fault.duplicate_membership ......   Passed    0.03 sec
+      Start 25: autoruntime.fault.service_timeout
+25/32 Test #25: autoruntime.fault.service_timeout ...........   Passed    0.13 sec
+      Start 26: autoruntime.fault.message_delay
+26/32 Test #26: autoruntime.fault.message_delay .............   Passed    0.05 sec
+      Start 27: autoruntime.fault.message_drop
+27/32 Test #27: autoruntime.fault.message_drop ..............   Passed    0.01 sec
+      Start 28: autoruntime.fault.slow_consumer
+28/32 Test #28: autoruntime.fault.slow_consumer .............   Passed    0.01 sec
+      Start 29: autoruntime.fault.node_restart
+29/32 Test #29: autoruntime.fault.node_restart ..............   Passed    0.01 sec
+      Start 30: autoruntime.fault.shutdown_during_load
+30/32 Test #30: autoruntime.fault.shutdown_during_load ......   Passed    0.01 sec
+      Start 31: autoruntime.fault.dds_participant_loss
+31/32 Test #31: autoruntime.fault.dds_participant_loss ......   Passed    0.01 sec
+      Start 32: autoruntime.example.pipeline
+32/32 Test #32: autoruntime.example.pipeline ................   Passed    0.05 sec
+
+100% tests passed, 0 tests failed out of 32
+
+Label Time Summary:
+fault       =   0.78 sec*proc (22 tests)
+realtime    =   0.19 sec*proc (4 tests)
+
+Total Test time (real) =   2.35 sec
