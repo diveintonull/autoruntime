@@ -1,0 +1,24 @@
+[OUTPUT]
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+[HANDLER_OUTPUT]
+Test project /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+    Start  9: autoruntime.record_replay.format_round_trip
+1/5 Test  #9: autoruntime.record_replay.format_round_trip .............   Passed    0.03 sec
+    Start 10: autoruntime.record_replay.corruption_detection
+2/5 Test #10: autoruntime.record_replay.corruption_detection ..........   Passed    0.02 sec
+    Start 11: autoruntime.record_replay.recording_transport_failure
+3/5 Test #11: autoruntime.record_replay.recording_transport_failure ...   Passed    0.02 sec
+    Start 12: autoruntime.record_replay.timing_modes
+4/5 Test #12: autoruntime.record_replay.timing_modes ..................   Passed    0.08 sec
+    Start 13: autoruntime.record_replay.restart_replay_5000
+5/5 Test #13: autoruntime.record_replay.restart_replay_5000 ...........   Passed    1.21 sec
+
+100% tests passed, 0 tests failed out of 5
+
+Label Time Summary:
+fault            =   0.04 sec*proc (2 tests)
+record_replay    =   1.37 sec*proc (5 tests)
+
+Total Test time (real) =   1.37 sec

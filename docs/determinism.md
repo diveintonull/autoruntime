@@ -58,3 +58,14 @@ Original timing 以第一条 record 为零点，保持 record 间相对间隔，
 - exact source revision 与原始证据文件。
 
 若任一完整性检查失败，结果标记失败；若应用不满足确定性前提，只报告 transport integrity，不外推 application determinism。
+
+## 5. 当前实测结论
+
+固定提交 `9af83ee3be0c` 的 Release 实验对 5000 条记录得到：
+
+- transport、message sequence 和 output digest mismatch 均为 0；
+- checksum、trace sequence、truncation 和 format error 均为 0；
+- 原始与重放 digest 都是 `0xda6d7cb476c5ec00`；
+- 原始 JSON 见 [record-replay evidence](evidence/record-replay-2026-08-21-9af83ee3be0c.json)。
+
+这个 benchmark 对单条 Sensor payload 执行固定整数变换并比较摘要；更强的集成测试则跨 Runtime 重建，比较 5000 个新生成 Control payload。二者都只覆盖明确的 mock algorithm，不把“文件可无损重放”外推成任意用户算法确定。

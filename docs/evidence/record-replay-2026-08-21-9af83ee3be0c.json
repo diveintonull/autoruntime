@@ -1,0 +1,23 @@
+{
+  "source_revision": "9af83ee3be0c",
+  "passed": true,
+  "message_count": 5000,
+  "payload_size": 256,
+  "record_period_us": 100,
+  "record_wall_ms": 516.566,
+  "recorded_span_ms": 499.959,
+  "trace_file_bytes": 2000040,
+  "recorder": {"accepted_records":5000,"written_records":5000,"dropped_records":0,"enqueue_timeouts":0,"io_errors":0,"queue_high_watermark":4,"bytes_written":2000040},
+  "replay_wall_ms": 500.024,
+  "replay": {"records_read":5000,"records_delivered":5000,"payload_bytes":1280000,"checksum_mismatches":0,"sequence_mismatches":0,"truncated_records":0,"format_errors":0,"timing_observations":5000,"mean_timing_drift_us":62.628,"max_timing_drift_us":231.330},
+  "transport_payload_mismatches": 0,
+  "message_sequence_mismatches": 0,
+  "output_digest_mismatches": 0,
+  "original_output_digest": "0xda6d7cb476c5ec00",
+  "replay_output_digest": "0xda6d7cb476c5ec00",
+  "user_cpu_ms": 72.666,
+  "system_cpu_ms": 40.155,
+  "voluntary_context_switches": 14711,
+  "involuntary_context_switches": 0,
+  "maximum_resident_bytes": 5701632
+}

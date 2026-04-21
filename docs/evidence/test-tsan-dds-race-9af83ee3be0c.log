@@ -1,0 +1,53 @@
+[OUTPUT]
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+[HANDLER_OUTPUT]
+Test project /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+    Start 36: autoruntime.fault.dds_participant_loss
+    Test #36: autoruntime.fault.dds_participant_loss ...   Passed    0.02 sec
+    Start 36: autoruntime.fault.dds_participant_loss
+    Test #36: autoruntime.fault.dds_participant_loss ...***Failed    0.09 sec
+==================
+WARNING: ThreadSanitizer: data race (pid=473017)
+  Write of size 8 at 0x725000000658 by thread T1 (mutexes: write M0):
+    #0 free ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:724 (libtsan.so.2+0x57c71) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 update_participant_spdp_sample_locked.part.0.lto_priv.0 <null> (libddsc.so.11+0x65110) (BuildId: 734831485c644c2ee5d3b7b24d29df082e51aae2)
+
+  Previous read of size 4 at 0x72500000065c by thread T4:
+    #0 sendmsg ../../../../src/libsanitizer/sanitizer_common/sanitizer_common_interceptors.inc:3223 (libtsan.so.2+0x69dd9) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 ddsi_udp_conn_write <null> (libddsc.so.11+0x448d5) (BuildId: 734831485c644c2ee5d3b7b24d29df082e51aae2)
+
+  Mutex M0 (0x724800000930) created at:
+    #0 pthread_mutex_init ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1315 (libtsan.so.2+0x594cd) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 ddsi_entity_common_init <null> (libddsc.so.11+0x60d1c) (BuildId: 734831485c644c2ee5d3b7b24d29df082e51aae2)
+    #2 DdsParticipantLoss /home/phil/job/new/projects/autoruntime/tests/fault_injection_test.cpp:641 (autoruntime_fault_injection_test+0x155d0) (BuildId: 2d5638051f7089e84f1fd4cabd8c06090b16baa8)
+    #3 main /home/phil/job/new/projects/autoruntime/tests/fault_injection_test.cpp:696 (autoruntime_fault_injection_test+0x15fab) (BuildId: 2d5638051f7089e84f1fd4cabd8c06090b16baa8)
+
+  Thread T1 'gc' (tid=473019, running) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5ac1a) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 ddsrt_thread_create <null> (libddsc.so.11+0xf30dc) (BuildId: 734831485c644c2ee5d3b7b24d29df082e51aae2)
+    #2 DdsParticipantLoss /home/phil/job/new/projects/autoruntime/tests/fault_injection_test.cpp:641 (autoruntime_fault_injection_test+0x155d0) (BuildId: 2d5638051f7089e84f1fd4cabd8c06090b16baa8)
+    #3 main /home/phil/job/new/projects/autoruntime/tests/fault_injection_test.cpp:696 (autoruntime_fault_injection_test+0x15fab) (BuildId: 2d5638051f7089e84f1fd4cabd8c06090b16baa8)
+
+  Thread T4 'tev' (tid=473022, finished) created by main thread at:
+    #0 pthread_create ../../../../src/libsanitizer/tsan/tsan_interceptors_posix.cpp:1022 (libtsan.so.2+0x5ac1a) (BuildId: 2a13a7710e361d06f7babbea53065ca2be93f738)
+    #1 ddsrt_thread_create <null> (libddsc.so.11+0xf30dc) (BuildId: 734831485c644c2ee5d3b7b24d29df082e51aae2)
+    #2 DdsParticipantLoss /home/phil/job/new/projects/autoruntime/tests/fault_injection_test.cpp:641 (autoruntime_fault_injection_test+0x155d0) (BuildId: 2d5638051f7089e84f1fd4cabd8c06090b16baa8)
+    #3 main /home/phil/job/new/projects/autoruntime/tests/fault_injection_test.cpp:696 (autoruntime_fault_injection_test+0x15fab) (BuildId: 2d5638051f7089e84f1fd4cabd8c06090b16baa8)
+
+SUMMARY: ThreadSanitizer: data race (/home/phil/job/new/projects/autoruntime/.deps/cyclonedds-11.0.1/lib/libddsc.so.11+0x65110) (BuildId: 734831485c644c2ee5d3b7b24d29df082e51aae2) in update_participant_spdp_sample_locked.part.0.lto_priv.0
+==================
+
+
+0% tests passed, 1 tests failed out of 1
+
+Label Time Summary:
+fault    =   0.09 sec*proc (1 test)
+
+Total Test time (real) =   0.11 sec
+
+The following tests FAILED:
+	 36 - autoruntime.fault.dds_participant_loss (Failed)
+[ERROR_MESSAGE]
+Errors while running CTest

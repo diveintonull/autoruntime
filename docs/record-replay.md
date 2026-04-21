@@ -87,3 +87,25 @@ Replay callback 返回非 OK 时立即停止；stop token 在等待期间也会�
 - 轻依赖默认构建 35/35；DDS Debug、Release、ASan、UBSan 各 37/37；
 - TSan 下 Record/Replay 专项 5/5；
 - **INCOMPLETE：** 完整 DDS TSan 第二次重跑为 36/37，失败发生在外部 Cyclone DDS 11.0.1 的 participant-loss 用例，报告 `libddsc.so.11` 内部 SPDP buffer 的非确定性竞态；未过滤或伪装为通过。
+
+## 8. 固定提交实测
+
+实现提交：`9af83ee3be0cc7f1cba7aaccd6a8a5186d7f42ef`。
+
+Release 实验记录 5000 条、每条 256 bytes、100 µs 周期，再跨 Recorder 销毁边界以 Original timing 重放。原始文件见 [record-replay-2026-08-21-9af83ee3be0c.json](evidence/record-replay-2026-08-21-9af83ee3be0c.json)，SHA-256 为 `448c8ce07159700dadd5ddcb0476b72ebde6c9c13662cabf4e68e5d6ea39553c`。
+
+| 指标 | 结果 |
+| --- | ---: |
+| accepted / written / read / delivered | 5000 / 5000 / 5000 / 5000 |
+| payload bytes | 1,280,000 |
+| trace file bytes | 2,000,040 |
+| drop / timeout / I/O error | 0 / 0 / 0 |
+| checksum / sequence / truncation / format error | 0 / 0 / 0 / 0 |
+| transport / message sequence / digest mismatch | 0 / 0 / 0 |
+| 原始 / 重放 digest | `0xda6d7cb476c5ec00` / `0xda6d7cb476c5ec00` |
+| record wall time | 516.566 ms |
+| recorded span / replay wall time | 499.959 ms / 500.024 ms |
+| mean / max timing drift | 62.628 µs / 231.330 µs |
+| queue high watermark | 4 / 4096 |
+
+这组结果证明该次 WSL2 运行中的格式完整性、相对时序重放和固定整数变换摘要一致；它不证明所有应用确定，也不代表 hard real-time 上界。完整 profile、TSan 隔离结果和外部 Cyclone DDS 竞态见 [testing.md](testing.md)。
