@@ -96,6 +96,7 @@ add_library(autoruntime STATIC
   runtime/src/node.cpp
   health/src/health_monitor.cpp
   observability/src/observability.cpp
+  record_replay/src/record_replay.cpp
   transport/src/in_memory_transport.cpp)
 add_library(AutoRuntime::autoruntime ALIAS autoruntime)
 target_compile_features(autoruntime PUBLIC cxx_std_20)
@@ -106,7 +107,8 @@ target_include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/scheduler/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/transport/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/health/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/observability/include")
+    "${CMAKE_CURRENT_SOURCE_DIR}/observability/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/record_replay/include")
 
 if(UNIX)
   target_sources(autoruntime PRIVATE
@@ -182,6 +184,31 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
   autoruntime_enable_warnings(autoruntime_observability_test)
   add_test(NAME autoruntime.observability
     COMMAND autoruntime_observability_test)
+
+  add_executable(autoruntime_record_replay_test
+    tests/record_replay_test.cpp)
+  target_link_libraries(autoruntime_record_replay_test
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  autoruntime_enable_warnings(autoruntime_record_replay_test)
+  set(AUTORUNTIME_RECORD_REPLAY_CASES
+    format_round_trip
+    corruption_detection
+    recording_transport_failure
+    timing_modes
+    restart_replay_5000)
+  foreach(record_replay_case IN LISTS AUTORUNTIME_RECORD_REPLAY_CASES)
+    add_test(NAME autoruntime.record_replay.${record_replay_case}
+      COMMAND autoruntime_record_replay_test
+              --case ${record_replay_case})
+    set_tests_properties(
+      autoruntime.record_replay.${record_replay_case}
+      PROPERTIES LABELS "record_replay"
+                 TIMEOUT 30)
+  endforeach()
+  set_tests_properties(
+    autoruntime.record_replay.corruption_detection
+    autoruntime.record_replay.recording_transport_failure
+    PROPERTIES LABELS "record_replay;fault")
 
   if(AUTORUNTIME_ENABLE_FASTIPC)
     add_executable(autoruntime_fastipc_transport_test
@@ -284,6 +311,16 @@ if(AUTORUNTIME_BUILD_BENCHMARKS AND UNIX)
     AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}")
   autoruntime_enable_warnings(
     autoruntime_priority_inversion_experiment)
+
+  add_executable(autoruntime_record_replay_experiment
+    benchmarks/record_replay_experiment.cpp)
+  target_link_libraries(autoruntime_record_replay_experiment
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  target_compile_definitions(
+    autoruntime_record_replay_experiment PRIVATE
+    AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}")
+  autoruntime_enable_warnings(
+    autoruntime_record_replay_experiment)
 endif()
 
 if(AUTORUNTIME_BUILD_BENCHMARKS)
