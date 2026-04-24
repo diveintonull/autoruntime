@@ -31,12 +31,22 @@ AutoRuntime 把应用语义、调度、transport、恢复、可观测性和小�
 | 能力 | In-memory | FastIPC | Cyclone DDS |
 | --- | --- | --- | --- |
 | Pub/sub | 支持 | 支持，configured SPSC endpoint | 支持 |
-| Service/client | 支持 | 不支持 | 不支持 |
-| Cross-process | 否 | 同一 Linux host | DDS domain |
+| Service/client | 支持 | 不支持 | 支持，自定义 topic-based RPC v1 |
+| Cross-process | 否 | 同一 Linux host | DDS domain；RPC 当前仅同机验证 |
 | Queue/QoS mapping | runtime + local bus | reliable -> bounded timeout；best effort -> drop | reliability/history/deadline/liveliness |
-| 具体 lifetime | shared bus state | receiver `jthread` + FastIPC channel | participant/reader/writer + receiver `jthread` |
+| 具体 lifetime | shared bus state | receiver `jthread` + FastIPC channel | participant + pub/sub/RPC endpoint + receiver `jthread` |
 
-公共接口暴露 service method，使不具备能力的 transport 返回 typed `Unsupported`，而不是假装所有 adapter 能力相同。
+公共接口暴露 service method；当前 FastIPC 明确返回 typed `Unsupported`，而不是假装所有 adapter 能力相同。
+
+## DDS Request/Response deep module
+
+`dds_rpc_engine` 隐藏 IDL、topic 命名、participant GUID、request ID、pending map、endpoint QoS 与 receiver thread。`DdsTransport` 只委托 `AdvertiseService`、`RemoveService`、`Request` 和统计 hook，因此 pub/sub 路径不需要理解 RPC correlation。
+
+每个 service hash 对应独立 request/response topic，但 wire 仍携带并校验完整 service name。client 在 publish 前插入 pending entry；response 只有在 participant GUID、service 与 request ID 全部匹配时才能完成 waiter。timeout 会移除 pending，迟到 response 只能计入 drop。
+
+client absolute monotonic deadline 覆盖 write 与 wait。wire 发送剩余 budget，server 在本机重建 handler deadline，避免跨主机比较 `steady_clock` time point。关闭时先阻止新 write、把 pending 完成为 `Closed`、停止并 join receiver，再删除 endpoint，最后才删除 participant。
+
+协议是 AutoRuntime topic-based RPC v1，不是 OMG DDS-RPC 或 ROS 2 service wire protocol。它不自动 retry、去重或承诺 exactly-once。
 
 ## Scheduler 模型
 
@@ -51,7 +61,7 @@ task capacity 与 group capacity 分别检查。overflow 返回 `QueueFull` 并�
 - subscription/service transport callback 只捕获 weak endpoint state，避免 callback deregistration 形成 reference cycle。
 - endpoint destructor 调用幂等 `Close`/`Cancel`。
 - 文档要求的 callback group 与 task 必须在 `Start` 前配置；executor 停止后不能再次启动。
-- concrete transport 先标记 closed、停止 receiver thread、关闭 substrate，最后 join，再进入析构。
+- concrete transport 先标记 closed、唤醒 pending、停止并 join receiver thread、关闭/删除 substrate，再进入析构。
 
 ## 健康与恢复
 
@@ -88,8 +98,10 @@ discovery 向显式 bounded peer list 发送 versioned UDP announcement。record
 - transport callback 不得强持有 application endpoint lifetime。
 - stale health generation 不得修改 current state。
 - discovery membership 与 RPC frame 具有显式 size bound。
+- DDS response 不得完成 GUID/request ID 不匹配或已经 timeout 的 pending call。
+- request ID 只负责 correlation，不得被描述成业务 operation idempotency key。
 - 导入的 `tcp_pubsub` 不进入默认 AutoRuntime target。
 
 ## 非目标
 
-本实现不提供 hard real-time scheduling、zero-copy DDS loan、process-manager daemon、secure discovery、distributed consensus、当前 envelope 之外的 schema evolution 或 ROS 2 API compatibility。
+本实现不提供 hard real-time scheduling、zero-copy DDS loan、OMG DDS-RPC/ROS 2 service wire compatibility、exactly-once RPC、process-manager daemon、secure discovery、distributed consensus 或当前 envelope 之外的 schema evolution。

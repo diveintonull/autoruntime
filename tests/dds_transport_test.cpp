@@ -107,12 +107,13 @@ int RealDdsParticipantsPreserveEnvelopeAndQos() {
   return 0;
 }
 
-int UnsupportedRpcIsTyped() {
+int InvalidRpcRegistrationIsTyped() {
   auto result = autoruntime::DdsTransport::Create(Config("dds-errors"));
   CHECK(result);
-  auto advertised = result.value()->AdvertiseService("route", {});
+  auto advertised = result.value()->AdvertiseService("", {});
   CHECK(!advertised);
-  CHECK(advertised.status().code() == autoruntime::StatusCode::Unsupported);
+  CHECK(advertised.status().code() ==
+        autoruntime::StatusCode::InvalidArgument);
   CHECK(result.value()->Close());
   return 0;
 }
@@ -124,5 +125,5 @@ int main() {
       result != 0) {
     return result;
   }
-  return UnsupportedRpcIsTyped();
+  return InvalidRpcRegistrationIsTyped();
 }

@@ -134,7 +134,9 @@ if(AUTORUNTIME_ENABLE_FASTIPC)
 endif()
 
 if(AUTORUNTIME_ENABLE_DDS)
-  target_sources(autoruntime PRIVATE transport/src/dds_transport.cpp)
+  target_sources(autoruntime PRIVATE
+    transport/src/dds_transport.cpp
+    transport/src/dds_rpc_engine.cpp)
   target_link_libraries(
     autoruntime PRIVATE autoruntime_dds_types CycloneDDS::ddsc)
   target_compile_definitions(autoruntime PUBLIC AUTORUNTIME_HAS_DDS=1)
@@ -229,6 +231,33 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     add_test(NAME autoruntime.dds_transport
       COMMAND autoruntime_dds_transport_test)
     set_tests_properties(autoruntime.dds_transport PROPERTIES TIMEOUT 20)
+
+    add_executable(autoruntime_dds_rpc_test
+      tests/dds_rpc_test.cpp)
+    target_link_libraries(autoruntime_dds_rpc_test
+      PRIVATE AutoRuntime::autoruntime Threads::Threads)
+    autoruntime_enable_warnings(autoruntime_dds_rpc_test)
+    add_test(NAME autoruntime.dds_rpc
+      COMMAND autoruntime_dds_rpc_test)
+    add_test(NAME autoruntime.dds_rpc.control_services
+      COMMAND autoruntime_dds_rpc_test --case control_services)
+    add_test(NAME autoruntime.dds_rpc.timeout_correlation
+      COMMAND autoruntime_dds_rpc_test --case timeout_correlation)
+    add_test(NAME autoruntime.dds_rpc.concurrent_correlation
+      COMMAND autoruntime_dds_rpc_test --case concurrent_correlation)
+    add_test(NAME autoruntime.dds_rpc.close_wakes_pending
+      COMMAND autoruntime_dds_rpc_test --case close_wakes_pending)
+    set_tests_properties(
+      autoruntime.dds_rpc
+      autoruntime.dds_rpc.control_services
+      autoruntime.dds_rpc.timeout_correlation
+      autoruntime.dds_rpc.concurrent_correlation
+      autoruntime.dds_rpc.close_wakes_pending
+      PROPERTIES TIMEOUT 25 LABELS dds_rpc)
+    set_tests_properties(
+      autoruntime.dds_rpc.timeout_correlation
+      autoruntime.dds_rpc.close_wakes_pending
+      PROPERTIES LABELS "dds_rpc;fault")
   endif()
 
   if(UNIX)
@@ -289,6 +318,27 @@ if(AUTORUNTIME_BUILD_BENCHMARKS AND AUTORUNTIME_ENABLE_DDS)
   target_link_libraries(autoruntime_dds_qos_experiment
     PRIVATE AutoRuntime::autoruntime Threads::Threads)
   autoruntime_enable_warnings(autoruntime_dds_qos_experiment)
+
+  add_executable(autoruntime_dds_rpc_benchmark
+    benchmarks/dds_rpc_benchmark.cpp)
+  target_link_libraries(autoruntime_dds_rpc_benchmark
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  target_compile_definitions(
+    autoruntime_dds_rpc_benchmark PRIVATE
+    AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}"
+    AUTORUNTIME_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    AUTORUNTIME_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+  autoruntime_enable_warnings(autoruntime_dds_rpc_benchmark)
+
+  if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
+    add_test(NAME autoruntime.dds.rpc.benchmark_smoke
+      COMMAND ${CMAKE_COMMAND}
+        -DAUTORUNTIME_DDS_RPC_BENCHMARK=$<TARGET_FILE:autoruntime_dds_rpc_benchmark>
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/dds_rpc_benchmark_smoke.cmake)
+    set_tests_properties(
+      autoruntime.dds.rpc.benchmark_smoke
+      PROPERTIES TIMEOUT 30 LABELS "dds_rpc;benchmark")
+  endif()
 endif()
 
 if(AUTORUNTIME_BUILD_BENCHMARKS AND UNIX)

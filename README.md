@@ -10,8 +10,8 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 | Runtime API | `Node`、`Publisher`、`Subscriber`、`Service`、`Client`、`Timer`、`Executor`、`Transport`、`HealthMonitor` |
 | 调度 | Periodic、Event、Async task；有界优先级队列；callback group；配置化 CPU affinity；可选 `SCHED_FIFO` 与显式权限降级；绝对周期释放；Warn/Degrade/Drop；P50/P95/P99/P99.9/MAX |
 | Pub/sub | 每 subscription 独立 queue、DropNewest/DropOldest overflow、slow-callback isolation、versioned message envelope |
-| Service | in-memory transport 上的 deadline-bounded request/reply；bounded service queue |
-| Transport | in-memory、FastIPC shared memory，以及可选的真实 Cyclone DDS 11.0.1 adapter |
+| Service | in-memory 与 Cyclone DDS 上的 deadline-bounded request/reply；request ID、typed error/timeout、bounded service queue |
+| Transport | in-memory、FastIPC shared memory，以及可选的真实 Cyclone DDS 11.0.1 pub/sub + Request/Response adapter |
 | 恢复 | heartbeat、progress、backlog、deadline miss、process exit evaluation；generation-aware cleanup/start/reconnect hook |
 | 可观测性 | counter、gauge、bounded histogram、JSON log、trace span、E2E latency、CPU/RSS/context-switch snapshot |
 | Record/Replay | versioned little-endian trace、CRC32、bounded async recorder、strict/continue failure policy、原速/加速/最快/单步重放 |
@@ -29,7 +29,7 @@ Node API
   +--> Transport interface
          |-- InMemoryTransport
          |-- FastIpcTransport --> ../fastipc
-         +-- DdsTransport -----> Cyclone DDS 11.0.1
+         +-- DdsTransport -----> Cyclone DDS 11.0.1 pub/sub + RPC
 
 HealthMonitor   Metrics / Logs / Traces   Record / Replay   Discovery / RPC
      \                 |                         |                /
@@ -78,6 +78,7 @@ projects/autoruntime/build-verify-release/autoruntime_realtime_scheduling_benchm
 projects/autoruntime/build-verify-release/autoruntime_priority_inversion_experiment
 projects/autoruntime/build-verify-release/autoruntime_record_replay_experiment
 projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
+projects/autoruntime/build-verify-release/autoruntime_dds_rpc_benchmark
 ```
 
 测量结果与原始 JSON：
@@ -90,6 +91,9 @@ projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
 - [Record/Replay 设计与实测](docs/record-replay.md)
 - [确定性边界](docs/determinism.md)
 - [DDS QoS 分析](docs/dds-qos-analysis.md)
+- [DDS Request/Response 设计](docs/dds-rpc-design.md)
+- [Pub/Sub 与 Request/Response 选择](docs/pubsub-vs-rpc.md)
+- [DDS Request/Response 基准方法](docs/dds-rpc-benchmark.md)
 - [故障注入矩阵](docs/fault-injection.md)
 - [恢复设计与 crash test](docs/recovery.md)
 
@@ -106,7 +110,8 @@ projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
 ## 已知局限
 
 - `HealthMonitor` 提供 policy 与 recovery hook，不是 privileged process supervisor 或 deployment daemon。
-- FastIPC 与 DDS adapter 目前只实现 pub/sub。runtime service 使用 `InMemoryTransport`；跨机器 service call 使用独立 distributed RPC slice。
+- FastIPC adapter 仍只实现 pub/sub；Cyclone DDS adapter 已支持 AutoRuntime 私有 topic-based Request/Response v1，但不兼容 OMG DDS-RPC 或 ROS 2 service wire protocol。
+- DDS RPC 不自动 retry、去重或提供 exactly-once；missing service 到 deadline 返回 `Timeout`，这不能证明 remote node 已死。当前仅验证同机两个真实 participant，跨主机证据仍为 **INCOMPLETE**。
 - `Executor::Stop(Deadline)` 会请求 cooperative stop 并 join 所有 worker，但尚未执行传入的 deadline。忽略 stop token 的 callback 可无限拖延 shutdown。
 - task priority 只决定 callback group 内已排队 job 的顺序；worker 的 CPU affinity 与可选 `SCHED_FIFO` 是另一层配置，仍不提供 callback 抢占、准入控制或 WCET 证明。
 - 实时配置当前只覆盖 Executor scheduler 与 callback-group worker；FastIPC/DDS receiver、HealthMonitor、Discovery、RPC 线程尚未纳入。普通用户请求 `SCHED_FIFO` 时通常因 `EPERM` 回退，实际状态可查询。

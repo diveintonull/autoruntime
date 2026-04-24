@@ -1,6 +1,7 @@
 #include <autoruntime/dds_transport.hpp>
 
 #include "autoruntime_message.h"
+#include "dds_rpc_engine.hpp"
 
 #include <dds/dds.h>
 
@@ -178,6 +179,7 @@ struct DdsTransport::Impl {
       subscriptions;
   mutable std::mutex stats_mutex;
   TransportStats stats;
+  std::unique_ptr<detail::DdsRpcEngine> rpc;
 
   void CountPublished() {
     std::lock_guard lock(stats_mutex);
@@ -197,6 +199,16 @@ struct DdsTransport::Impl {
   void CountDropped() {
     std::lock_guard lock(stats_mutex);
     ++stats.dropped_messages;
+  }
+
+  void CountRpcRequest() {
+    std::lock_guard lock(stats_mutex);
+    ++stats.rpc_requests;
+  }
+
+  void CountRpcFailure() {
+    std::lock_guard lock(stats_mutex);
+    ++stats.rpc_failures;
   }
 
   [[nodiscard]] Result<dds_entity_t> TopicLocked(
@@ -336,6 +348,17 @@ Result<std::shared_ptr<DdsTransport>> DdsTransport::Create(
   auto impl = std::make_unique<Impl>();
   impl->config = std::move(config);
   impl->participant = participant;
+  auto rpc_result = detail::DdsRpcEngine::Create(
+      participant, impl->config,
+      detail::DdsRpcStatsHooks{
+          [state = impl.get()] { state->CountRpcRequest(); },
+          [state = impl.get()] { state->CountRpcFailure(); },
+          [state = impl.get()] { state->CountDropped(); }});
+  if (!rpc_result) {
+    static_cast<void>(dds_delete(participant));
+    return rpc_result.status();
+  }
+  impl->rpc = std::move(rpc_result).take_value();
   return std::shared_ptr<DdsTransport>(
       new DdsTransport(std::move(impl)));
 }
@@ -465,25 +488,18 @@ Status DdsTransport::Unsubscribe(SubscriptionId subscription_id) {
 Result<ServiceId> DdsTransport::AdvertiseService(
     std::string_view service_name,
     TransportServiceCallback callback) {
-  static_cast<void>(service_name);
-  static_cast<void>(callback);
-  return Status(StatusCode::Unsupported,
-                "DDS request/reply is provided by the distributed RPC layer");
+  return impl_->rpc->AdvertiseService(
+      service_name, std::move(callback));
 }
 
 Status DdsTransport::RemoveService(ServiceId service_id) {
-  static_cast<void>(service_id);
-  return Status(StatusCode::Unsupported,
-                "DDS request/reply is provided by the distributed RPC layer");
+  return impl_->rpc->RemoveService(service_id);
 }
 
 Result<Message> DdsTransport::Request(
     std::string_view service_name, Message request, Deadline deadline) {
-  static_cast<void>(service_name);
-  static_cast<void>(request);
-  static_cast<void>(deadline);
-  return Status(StatusCode::Unsupported,
-                "DDS request/reply is provided by the distributed RPC layer");
+  return impl_->rpc->Request(
+      service_name, std::move(request), deadline);
 }
 
 TransportStats DdsTransport::Stats() const {
@@ -513,6 +529,8 @@ Status DdsTransport::Close() {
     impl_->participant = 0;
   }
 
+  const auto rpc_status = impl_->rpc->Close();
+
   for (auto& subscription : subscriptions) {
     subscription->receiver.request_stop();
   }
@@ -521,7 +539,12 @@ Status DdsTransport::Close() {
       subscription->receiver.join();
     }
   }
-  return DdsError(dds_delete(participant), "dds_delete(participant)");
+  const auto participant_status =
+      DdsError(dds_delete(participant), "dds_delete(participant)");
+  if (!rpc_status) {
+    return rpc_status;
+  }
+  return participant_status;
 }
 
 }  // namespace autoruntime

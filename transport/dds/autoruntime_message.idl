@@ -12,4 +12,27 @@ module autoruntime_dds {
     long priority;
     sequence<octet, 1048576> payload;
   };
+
+  @final
+  struct RpcRequest {
+    unsigned short protocol_version;
+    string<128> service_name;
+    unsigned long long client_guid_high;
+    unsigned long long client_guid_low;
+    unsigned long long request_id;
+    unsigned long long timeout_budget_ns;
+    Message message;
+  };
+
+  @final
+  struct RpcResponse {
+    unsigned short protocol_version;
+    string<128> service_name;
+    unsigned long long client_guid_high;
+    unsigned long long client_guid_low;
+    unsigned long long request_id;
+    unsigned short status_code;
+    string<1024> error_detail;
+    Message message;
+  };
 };
