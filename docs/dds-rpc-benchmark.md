@@ -123,4 +123,24 @@ CTest 的 `autoruntime.dds.rpc.benchmark_smoke` 会验证 self-test 的 50/50 ex
 - logical payload throughput 不含 DDS/RTPS/envelope wire overhead；
 - peak RSS 是进程生命周期峰值，不是 trial 独占增量；
 - 没有独立 core pinning、频率锁定或 kernel real-time tuning；
-- 正式 Release 原始数据在实现提交固定后生成；在 evidence 文件和 hash 入库前，该项为 **INCOMPLETE**。
+- 下列结果不能外推为跨机器、并发 RPC 或 ROS 2 `rclcpp` 的性能结论。
+
+## 2026-08-21 正式 Release 结果
+
+原始 JSONL：[dds-rpc-2026-08-21-b2bc5c6.jsonl](evidence/dds-rpc-2026-08-21-b2bc5c6.jsonl)，SHA-256：
+
+```text
+a91f0ab37aabfe4ffd1f6d6cd2b550175abbaa4a9da78cd64d3597ea66221213
+```
+
+固定实现提交为 `b2bc5c6b051736999fc53a5f2db98376e7dd9750`。环境为 WSL2 kernel 6.6.87.2、x86_64、Intel Core Ultra 9 275HX、GNU 13.3.0 Release、Cyclone DDS 11.0.1。结构化审计确认文件包含 1 条 environment 和 9 条 result，三种 payload、每种三个 trial；共完成 9000/9000 次调用，`call_failures`、`payload_mismatches`、`service_validation_failures` 均为 0，逻辑 byte 计数与分位数顺序全部通过。
+
+下表对每种 payload 的三个 trial 取中位数；MAX 列是三个 trial 的全局最大观测值，不是中位数：
+
+| Payload | calls/s | 逻辑吞吐 MiB/s | P50 µs | P95 µs | P99 µs | P99.9 µs | MAX µs | CPU |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 64 B | 861.048 | 0.105 | 1068.205 | 2141.704 | 2192.431 | 2220.567 | 2274.708 | 4.936% |
+| 1 KiB | 838.116 | 1.637 | 1102.804 | 2202.365 | 2243.313 | 2295.503 | 2377.417 | 5.957% |
+| 64 KiB | 733.940 | 91.742 | 1015.169 | 2133.061 | 2168.390 | 2236.904 | 2454.466 | 17.825% |
+
+约 1 ms 的 polling/phase effect 主导了本机 P50；64 KiB 的 P50 略低不能解释为“大消息更快”。更可靠的观察是 payload 增大后 calls/s 下降，进程 CPU 中位数由 4.936% 升到 17.825%。在共享 runner 和环境控制完成前，本结果只作为 AutoRuntime DDS RPC 自身基线。

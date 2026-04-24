@@ -1,0 +1,213 @@
+[OUTPUT]
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-verify-debug
+
+[HANDLER_OUTPUT]
+Test project /home/phil/job/new/projects/autoruntime/build-verify-debug
+
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.62 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.62 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.62 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.62 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.62 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+    Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+    Start 19: autoruntime.dds_rpc.concurrent_correlation
+1/1 Test #19: autoruntime.dds_rpc.concurrent_correlation ...   Passed    0.61 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Label Time Summary:
+dds_rpc    =   0.61 sec*proc (1 test)
+
+Total Test time (real) =  60.88 sec

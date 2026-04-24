@@ -1,0 +1,53 @@
+[OUTPUT]
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+[HANDLER_OUTPUT]
+Test project /home/phil/job/new/projects/autoruntime/build-verify-tsan
+
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.64 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.64 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.64 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.64 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.64 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.64 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.64 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+    Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+    Start 16: autoruntime.dds_rpc
+1/1 Test #16: autoruntime.dds_rpc ..............   Passed    1.65 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Label Time Summary:
+dds_rpc    =   1.65 sec*proc (1 test)
+
+Total Test time (real) =  32.94 sec

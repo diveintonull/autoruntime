@@ -2,13 +2,13 @@
 
 日期：2026-08-21
 
-提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新一轮证据固定到 Record/Replay 实现提交，不把偶发通过写成稳定通过。
+提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新一轮证据固定到 DDS Request/Response 实现提交，不把偶发通过写成稳定通过。
 
 ## 已验证 revision 与 host
 
 | 字段 | 值 |
 | --- | --- |
-| 当前实现 revision | `9af83ee3be0cc7f1cba7aaccd6a8a5186d7f42ef` |
+| 当前实现 revision | `b2bc5c6b051736999fc53a5f2db98376e7dd9750` |
 | Host | WSL2 下 Ubuntu 24.04.4 |
 | Kernel | `6.6.87.2-microsoft-standard-WSL2` |
 | Architecture | x86_64 |
@@ -21,17 +21,16 @@
 
 | Profile | 配置 | 结果 | 原始日志 |
 | --- | --- | ---: | --- |
-| Default | FastIPC，DDS OFF | 35/35 | [日志](evidence/test-default-9af83ee3be0c.log) |
-| Debug | FastIPC + Cyclone DDS | 37/37 | [日志](evidence/test-debug-9af83ee3be0c.log) |
-| Release | FastIPC + Cyclone DDS | 37/37 | [日志](evidence/test-release-9af83ee3be0c.log) |
-| ASan | DDS ON，address + leak check | 37/37 | [日志](evidence/test-asan-9af83ee3be0c.log) |
-| UBSan | DDS ON，首个 UB 即停止 | 37/37 | [日志](evidence/test-ubsan-9af83ee3be0c.log) |
-| TSan 隔离 | DDS OFF，首个 race 即停止 | 35/35 | [日志](evidence/test-tsan-nodds-9af83ee3be0c.log) |
-| TSan Record/Replay | DDS ON，只跑 `record_replay` label | 5/5 | [日志](evidence/test-tsan-record-replay-9af83ee3be0c.log) |
-| TSan 完整一次 | DDS ON | 37/37 | [通过日志](evidence/test-tsan-pass-9af83ee3be0c.log) |
-| TSan DDS 重复 | participant-loss，`until-fail:100` | 第 1 次通过，第 2 次失败 | [失败日志](evidence/test-tsan-dds-race-9af83ee3be0c.log) |
+| Default | FastIPC，DDS OFF | 35/35 | [日志](evidence/test-default-b2bc5c6.log) |
+| Debug | FastIPC + Cyclone DDS | 42/42 | [日志](evidence/test-debug-b2bc5c6.log) |
+| Release | FastIPC + Cyclone DDS + benchmark smoke | 43/43 | [日志](evidence/test-release-b2bc5c6.log) |
+| ASan | DDS ON，address + leak check | 42/42 | [日志](evidence/test-asan-b2bc5c6.log) |
+| UBSan | DDS ON，首个 UB 即停止 | 42/42 | [日志](evidence/test-ubsan-b2bc5c6.log) |
+| TSan 当前完整一次 | DDS ON，首个 race 即停止 | 42/42 | [日志](evidence/test-tsan-b2bc5c6.log) |
+| TSan DDS RPC 重复 | aggregate RPC test，连续 20 次 | 20/20 次通过 | [日志](evidence/test-tsan-dds-rpc-repeat20-b2bc5c6.log) |
+| 历史 TSan DDS 重复 | participant-loss，`until-fail:100` | 第 1 次通过，第 2 次失败 | [失败日志](evidence/test-tsan-dds-race-9af83ee3be0c.log) |
 
-因此完整 DDS TSan 状态是 **INCOMPLETE**，不能因某一次 37/37 就写成稳定通过。失败堆栈位于外部 `libddsc.so.11`：Cyclone DDS 的 SPDP 更新线程释放 buffer 时，另一内部线程仍在 `sendmsg`。不链接 Cyclone 的完整 TSan 35/35，DDS 构建中的 Record/Replay 专项也为 5/5，这些证据隔离了当前增量，但不能替代修复或升级外部 DDS。
+当前实现的完整 DDS TSan 为 42/42，DDS RPC aggregate test 在 TSan 下连续 20 次通过；但完整 DDS TSan 总体状态仍是 **INCOMPLETE**，不能用当前一次通过抹掉已复现的历史外部竞态。历史失败堆栈位于外部 `libddsc.so.11`：Cyclone DDS 的 SPDP 更新线程释放 buffer 时，另一内部线程仍在 `sendmsg`。当前结果隔离了 DDS RPC 增量，却不能替代 Cyclone DDS 上游修复、升级验证或更长时间 soak。
 
 ## 轻依赖默认构建
 
@@ -63,6 +62,16 @@ bash projects/autoruntime/scripts/run_test_matrix.sh tsan
 ```
 
 脚本明确启用 FastIPC、真实 Cyclone DDS、distributed socket、example 与全部 test。Release 还构建 experiment。由于当前工作树中这两个脚本存在用户保留的 executable-bit 变更，文档使用 `bash script`，没有改回其 mode。
+
+## DDS Request/Response 证据
+
+实现固定在提交 `b2bc5c6b051736999fc53a5f2db98376e7dd9750`，使用两个真实 Cyclone DDS participant 验证控制面 service/client、request ID correlation、typed remote error、deadline timeout、late response 丢弃、close 唤醒 pending call，以及 16 路并发 correlation：
+
+- Default 35/35；DDS Debug、ASan、UBSan、TSan 各 42/42；Release 含 benchmark smoke 为 43/43，原始日志见上表；
+- [并发 correlation 连续 100 次](evidence/test-dds-rpc-concurrent-repeat100-b2bc5c6.log)，每次 16 个精确 payload，共 1600 个并发请求全部匹配；
+- [timeout/late-response correlation 连续 50 次](evidence/test-dds-rpc-timeout-repeat50-b2bc5c6.log)，均未把迟到响应误配给后续请求；
+- [TSan aggregate RPC test 连续 20 次](evidence/test-tsan-dds-rpc-repeat20-b2bc5c6.log) 全部通过；
+- [正式 Release JSONL](evidence/dds-rpc-2026-08-21-b2bc5c6.jsonl) 的 SHA-256 为 `a91f0ab37aabfe4ffd1f6d6cd2b550175abbaa4a9da78cd64d3597ea66221213`：9000/9000 次调用成功，三类错误计数均为 0。完整方法、分位数和解释边界见 [DDS RPC 基准](dds-rpc-benchmark.md)。
 
 ## Record/Replay 证据
 
@@ -109,11 +118,11 @@ wrapper 只处理 virtual-address collision，不过滤 race 或 deadlock report
 - [UBSan](evidence/test-ubsan-0c0935c63b40.log)
 - [TSan](evidence/test-tsan-0c0935c63b40.log)
 
-这些日志不能替代新增 Record/Replay 后的 35/37-test 结果。
+这些日志不能替代当前 DDS RPC 增量后的 35/42/43-test 结果。
 
 ## 持续集成
 
-根 [CI workflow](../../../.github/workflows/ci.yml) 构建五个 FastIPC 与五个 AutoRuntime profile，上传 CTest 日志，并在 Release 执行 pipeline、callback isolation、DDS QoS 和 Record/Replay 四个 benchmark smoke。完整 TSan job 保留 DDS participant-loss test，因此外部竞态可能使 CI 失败；当前没有把它设为 allow-failure。
+根 [CI workflow](../../../.github/workflows/ci.yml) 构建五个 FastIPC 与五个 AutoRuntime profile，上传 CTest 日志，并在 Release 执行 pipeline、callback isolation、DDS QoS、Record/Replay 和 DDS RPC 五个 benchmark smoke。完整 TSan job 保留 DDS participant-loss test，因此外部竞态可能使 CI 失败；当前没有把它设为 allow-failure。
 
 ## 证据边界
 

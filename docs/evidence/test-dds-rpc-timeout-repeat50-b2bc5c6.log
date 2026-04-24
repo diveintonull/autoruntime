@@ -1,0 +1,114 @@
+[OUTPUT]
+Internal ctest changing into directory: /home/phil/job/new/projects/autoruntime/build-verify-debug
+
+[HANDLER_OUTPUT]
+Test project /home/phil/job/new/projects/autoruntime/build-verify-debug
+
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.80 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.81 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.81 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.81 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.80 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+    Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+    Start 18: autoruntime.dds_rpc.timeout_correlation
+1/1 Test #18: autoruntime.dds_rpc.timeout_correlation ...   Passed    0.79 sec
+
+100% tests passed, 0 tests failed out of 1
+
+Label Time Summary:
+dds_rpc    =   0.79 sec*proc (1 test)
+fault      =   0.79 sec*proc (1 test)
+
+Total Test time (real) =  39.53 sec

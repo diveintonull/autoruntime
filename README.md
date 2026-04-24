@@ -16,7 +16,7 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 | 可观测性 | counter、gauge、bounded histogram、JSON log、trace span、E2E latency、CPU/RSS/context-switch snapshot |
 | Record/Replay | versioned little-endian trace、CRC32、bounded async recorder、strict/continue failure policy、原速/加速/最快/单步重放 |
 | 分布式切片 | 带 bounded membership 与 lease expiry 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
-| 验证 | 固定提交 `9af83ee3be0c`：轻依赖 35/35；DDS Debug/Release/ASan/UBSan 各 37/37；TSan 无 DDS 35/35、Record/Replay 专项 5/5；完整 DDS TSan 有外部 Cyclone 竞态，标记 **INCOMPLETE** |
+| 验证 | 固定提交 `b2bc5c6b0517`：轻依赖 35/35；DDS Debug/ASan/UBSan/TSan 各 42/42；Release 43/43；DDS RPC TSan aggregate 连续 20 次通过；历史外部 Cyclone 竞态仍使完整 DDS TSan 状态为 **INCOMPLETE** |
 
 ## 架构
 
@@ -65,7 +65,7 @@ projects/autoruntime/scripts/bootstrap_cyclonedds.sh
 projects/autoruntime/scripts/run_test_matrix.sh all
 ```
 
-矩阵明确设置 `AUTORUNTIME_ENABLE_DDS=ON`，并运行 Debug、Release、ASan、UBSan、TSan。固定 revision 的日志与 WSL2 TSan 启动说明见 [testing.md](docs/testing.md)。当前完整 DDS TSan 可在不同调度下分别得到 37/37 或因 Cyclone DDS 11.0.1 库内 SPDP 竞态得到 36/37；该项未过滤，状态为 **INCOMPLETE**。
+矩阵明确设置 `AUTORUNTIME_ENABLE_DDS=ON`，并运行 Debug、Release、ASan、UBSan、TSan。固定 revision 的日志与 WSL2 TSan 启动说明见 [testing.md](docs/testing.md)。当前提交的完整 DDS TSan 为 42/42，DDS RPC aggregate test 连续 20 次通过；但历史上重复 participant-loss 已复现 Cyclone DDS 11.0.1 库内 SPDP 竞态。该失败没有被过滤，完整 DDS TSan 总体状态仍为 **INCOMPLETE**。
 
 ## 实验与证据
 

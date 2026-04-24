@@ -93,6 +93,7 @@
 | `8372865` | 可运行 pipeline example |
 | `31b2107` | close/unmap lifetime fix 与真实 post-restart message proof |
 | `fc8150d` | 轻依赖默认 build；DDS 仍为已验证的 opt-in |
+| `b2bc5c6` | DDS topic-based Request/Response、correlation/failure matrix 与 JSONL benchmark |
 
 ## 次要参考
 
