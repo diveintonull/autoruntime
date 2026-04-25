@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(autoruntime_rclcpp_baseline VERSION 0.1.0 LANGUAGES CXX)
+include(CTest)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -36,6 +37,20 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 ament_target_dependencies(
   rclcpp_comparative_benchmark rclcpp rmw std_msgs)
+if(BUILD_TESTING)
+  add_test(
+    NAME autoruntime.rclcpp.sequential_cases
+    COMMAND rclcpp_comparative_benchmark
+      --payload 64
+      --frequency 50
+      --duration-ms 200
+      --warmup 3
+      --trials 3
+      --run-id sequential-regression)
+  set_tests_properties(
+    autoruntime.rclcpp.sequential_cases
+    PROPERTIES TIMEOUT 30 LABELS "benchmark;comparative")
+endif()
 
 install(
   TARGETS rclcpp_comparative_benchmark

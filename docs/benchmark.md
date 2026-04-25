@@ -40,6 +40,8 @@
 | 发布节拍 | open-loop absolute release；不使用 response 到达时间安排下一次发送 |
 
 FastIPC pool depth 也设为 64，与 QoS depth 对齐。4 MiB case 不进入默认 payload 列表，必须显式运行；这避免日常 smoke test 无条件创建大 shared-memory pool。
+rclcpp runner 每个 case 都让 responder 在 `fork` 后立即 `exec /proc/self/exe`，并只在新地址空间初始化 ROS context。父进程曾经运行过 DDS thread 后，不能让下一次 fork child 直接继续调用 RMW；连续三 case 的 CTest 专门防止这个生命周期回归。
+
 
 ## 为什么是 full-touch
 

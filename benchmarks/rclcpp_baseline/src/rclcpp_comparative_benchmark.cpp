@@ -942,6 +942,8 @@ void StopChild(pid_t process) noexcept {
       std::to_string(case_id);
   const std::string request_topic = token + "_request";
   const std::string response_topic = token + "_response";
+  const std::string child_command_fd = std::to_string(commands[0]);
+  const std::string child_event_fd = std::to_string(events[1]);
   const pid_t child = ::fork();
   if (child < 0) {
     return std::nullopt;
@@ -949,11 +951,12 @@ void StopChild(pid_t process) noexcept {
   if (child == 0) {
     static_cast<void>(::close(commands[1]));
     static_cast<void>(::close(events[0]));
-    const int code = ChildMain(
-        request_topic, response_topic, commands[0], events[1]);
-    static_cast<void>(::close(commands[0]));
-    static_cast<void>(::close(events[1]));
-    std::_Exit(code);
+    static_cast<void>(::execl(
+        "/proc/self/exe", "rclcpp_comparative_benchmark",
+        "--internal-responder", request_topic.c_str(),
+        response_topic.c_str(), child_command_fd.c_str(),
+        child_event_fd.c_str(), static_cast<char*>(nullptr)));
+    std::_Exit(39);
   }
 
   static_cast<void>(::close(commands[0]));
@@ -1160,6 +1163,24 @@ void StopChild(pid_t process) noexcept {
 
 int main(int argc, char** argv) {
   try {
+    if (argc == 6 &&
+        std::string_view(argv[1]) == "--internal-responder") {
+      const auto command_fd =
+          ParseUnsigned(argv[4], "internal command fd");
+      const auto event_fd =
+          ParseUnsigned(argv[5], "internal event fd");
+      if (command_fd >
+              static_cast<std::uint64_t>(
+                  std::numeric_limits<int>::max()) ||
+          event_fd >
+              static_cast<std::uint64_t>(
+                  std::numeric_limits<int>::max())) {
+        return 39;
+      }
+      return ChildMain(
+          argv[2], argv[3], static_cast<int>(command_fd),
+          static_cast<int>(event_fd));
+    }
     auto options = ParseOptions(argc, argv);
     if (options.run_id.empty()) {
       options.run_id = DefaultRunId();
@@ -1173,6 +1194,7 @@ int main(int argc, char** argv) {
     }
     auto emit = [&](const std::string& line) {
       std::cout << line << '\n';
+      std::cout.flush();
       if (output) {
         output << line << '\n';
         output.flush();
