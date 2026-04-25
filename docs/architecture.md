@@ -17,26 +17,31 @@ AutoRuntime 把应用语义、调度、transport、恢复、可观测性和小�
 
 ## 数据路径
 
-1. `Publisher` 构造 versioned `MessageEnvelope`，带 trace/span id、sequence、monotonic timestamp、source generation 和 priority。
+copy path：
+
+1. `Publisher` 构造 versioned `MessageEnvelope` 和 owning payload，带 trace/span id、sequence、monotonic timestamp、source generation 和 priority。
 2. 选定的 `Transport` 发布消息，并负责 wire/shared-memory encoding、具体 QoS mapping 与 transport counter。
 3. transport subscription callback 调用 `Subscriber::Impl::Accept`。
 4. subscriber 应用自己的 bounded queue 与显式 DropNewest/DropOldest policy。
 5. 每个 subscription 最多安排一个 Event task。`ProcessOne` 取出一条消息、执行 application callback；仍有 backlog 时再次安排自己。
-6. Executor 独立于 transport metric，采集 release、queue、execution、response 和 deadline timing。
 
-这种 transport/subscription 两阶段边界让 slow application callback 不会阻塞 transport receive thread。
+FastIPC loan path 不构造 owning payload：`Publisher::Loan` 返回 move-only reservation，应用直接写共享 chunk；`Publish` 原位写 envelope header 后提交。接收端只复制固定 header，把 move-only sample 入 subscription queue，callback-scoped `LoanedMessage` 析构时 release slot。
+
+Executor 独立于 transport metric，采集 release、queue、execution、response 和 deadline timing。copy 与 loan 都通过 bounded subscription queue 隔离 receiver thread 和 slow callback；区别是 loan queue 中的 sample 会继续占用共享 chunk 并施加真实 pool backpressure。
 
 ## Transport 能力矩阵
 
 | 能力 | In-memory | FastIPC | Cyclone DDS |
 | --- | --- | --- | --- |
 | Pub/sub | 支持 | 支持，configured SPSC endpoint | 支持 |
+| Producer loan | 不支持 | 支持，payload 直接写共享 chunk | 不支持 |
+| Loaned sample | 不支持 | 支持，callback-scoped RAII release | 不支持 |
 | Service/client | 支持 | 不支持 | 支持，自定义 topic-based RPC v1 |
 | Cross-process | 否 | 同一 Linux host | DDS domain；RPC 当前仅同机验证 |
 | Queue/QoS mapping | runtime + local bus | reliable -> bounded timeout；best effort -> drop | reliability/history/deadline/liveliness |
 | 具体 lifetime | shared bus state | receiver `jthread` + FastIPC channel | participant + pub/sub/RPC endpoint + receiver `jthread` |
 
-公共接口暴露 service method；当前 FastIPC 明确返回 typed `Unsupported`，而不是假装所有 adapter 能力相同。
+公共接口暴露 service 与 loan method；FastIPC service、in-memory/DDS loan 都明确返回 typed `Unsupported`，而不是假装所有 adapter 能力相同。
 
 ## DDS Request/Response deep module
 
@@ -66,6 +71,8 @@ task capacity 与 group capacity 分别检查。overflow 返回 `QueueFull` 并�
 ## 健康与恢复
 
 `HealthMonitor` 的 component state 与 execution/transport object 分离。它评估 process liveness、heartbeat freshness、progress、backlog 和 deadline miss。每次 update 携带 generation；stale generation 不能复活 replacement process。恢复会让失败 component 进入 `Recovering`，在 monitor lock 外执行 application-owned cleanup/start/reconnect hook，推进 generation，再进入 `Starting`，直至新的 heartbeat/progress 证明 `Running`。
+- producer loan 与 subscriber sample 均为 move-only；析构自动 abandon/release。
+- loaned callback 的 payload span 不能逃逸；slow callback 在返回前持续占用 FastIPC slot。
 
 已验证的 SIGKILL 流程见 [recovery.md](recovery.md)。
 
@@ -104,4 +111,6 @@ discovery 向显式 bounded peer list 发送 versioned UDP announcement。record
 
 ## 非目标
 
-本实现不提供 hard real-time scheduling、zero-copy DDS loan、OMG DDS-RPC/ROS 2 service wire compatibility、exactly-once RPC、process-manager daemon、secure discovery、distributed consensus 或当前 envelope 之外的 schema evolution。
+本实现不提供 hard real-time scheduling、DDS/in-memory zero-copy loan、跨 callback retained sample、OMG DDS-RPC/ROS 2 service wire compatibility、exactly-once RPC、process-manager daemon、secure discovery、distributed consensus 或当前 envelope 之外的 schema evolution。
+- consumer release 前 FastIPC slot 不得被 producer reuse；runtime 不复制 loaned payload 来规避这个不变量。
+- 不支持 loan 的 transport 必须返回 `Unsupported`，不能静默退化为 copy。

@@ -55,6 +55,8 @@
 | --- | --- |
 | In-memory runtime service 与 pub/sub | `runtime/`、`transport/src/in_memory_transport.cpp`、runtime test |
 | FastIPC cross-process adapter 与真实 restart flow | `transport/src/fastipc_transport.cpp`、`tests/fastipc_transport_test.cpp` |
+| FastIPC 端到端 producer loan 与 callback-scoped sample | `runtime/node` loan API、`transport/src/fastipc_transport.cpp`、loaned integration/failure test |
+| 两进程统一对比 runner 与 rclcpp baseline | `benchmarks/comparative_benchmark.cpp`、`benchmarks/rclcpp_baseline/`、`docs/benchmark.md` |
 | Cyclone DDS 11.0.1 pub/sub adapter 与 QoS mapping | `transport/src/dds_transport.cpp`、DDS test/experiment |
 | 原创 DDS topic-based Request/Response engine | `transport/src/dds_rpc_engine.cpp`、RPC IDL、correlation/failure test、独立 JSONL benchmark |
 | Health evaluation 与 recovery hook | `health/`、`docs/recovery.md` |
@@ -104,4 +106,4 @@
 
 ## 明确不作的声明
 
-AutoRuntime 不声称 ROS 2 API/service wire compatibility、OMG DDS-RPC、DDS implementation ownership、exactly-once RPC、hard real-time scheduling、process-daemon supervision、secure cluster membership、zero-copy message、production certification，也不声称与 ROS 2、Apollo Cyber RT、iceoryx、eCAL 或完整 DDS stack feature parity。记录的 WSL2 实验只代表本实现的比较证据。
+AutoRuntime 不声称 ROS 2 API/service wire compatibility、OMG DDS-RPC、DDS implementation ownership、DDS/in-memory zero-copy、跨 callback retained sample、exactly-once RPC、hard real-time scheduling、process-daemon supervision、secure cluster membership、production certification，也不声称与 ROS 2、Apollo Cyber RT、iceoryx、eCAL 或完整 DDS stack feature parity。FastIPC 的“零复制”只指 payload 在 AutoRuntime 与共享 chunk 之间不再复制；记录的 WSL2 实验只代表本实现的比较证据。

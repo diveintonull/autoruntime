@@ -49,6 +49,12 @@ class FastIpcTransport final : public Transport {
       std::string_view topic, const QosProfile& qos,
       TransportMessageCallback callback) override;
   Status Unsubscribe(SubscriptionId subscription_id) override;
+  [[nodiscard]] Result<TransportPublisherLoan> Loan(
+      std::string_view topic, std::size_t payload_size,
+      const QosProfile& qos) override;
+  [[nodiscard]] Result<SubscriptionId> SubscribeLoaned(
+      std::string_view topic, const QosProfile& qos,
+      TransportLoanedMessageCallback callback) override;
 
   [[nodiscard]] Result<ServiceId> AdvertiseService(
       std::string_view service_name,

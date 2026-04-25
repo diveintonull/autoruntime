@@ -11,27 +11,64 @@
 namespace autoruntime {
 namespace {
 
+MessageEnvelope BuildEnvelope(
+    const NodeConfig& node,
+    std::atomic<std::uint64_t>& sequence,
+    TraceContext trace) {
+  const auto now = MonotonicNanoseconds();
+  MessageEnvelope envelope;
+  envelope.trace_id =
+      trace.trace_id == 0U ? NextTraceId() : trace.trace_id;
+  envelope.span_id = NextSpanId();
+  envelope.parent_span_id = trace.parent_span_id;
+  envelope.sequence =
+      sequence.fetch_add(1U, std::memory_order_relaxed) + 1U;
+  envelope.source_timestamp_ns =
+      trace.origin_timestamp_ns == 0U ? now : trace.origin_timestamp_ns;
+  envelope.publish_timestamp_ns = now;
+  envelope.source_generation = node.generation;
+  return envelope;
+}
+
 Message BuildMessage(const NodeConfig& node,
                      std::atomic<std::uint64_t>& sequence,
                      std::span<const std::byte> payload,
                      TraceContext trace) {
-  const auto now = MonotonicNanoseconds();
   Message message;
-  message.envelope.trace_id =
-      trace.trace_id == 0U ? NextTraceId() : trace.trace_id;
-  message.envelope.span_id = NextSpanId();
-  message.envelope.parent_span_id = trace.parent_span_id;
-  message.envelope.sequence =
-      sequence.fetch_add(1U, std::memory_order_relaxed) + 1U;
-  message.envelope.source_timestamp_ns =
-      trace.origin_timestamp_ns == 0U ? now : trace.origin_timestamp_ns;
-  message.envelope.publish_timestamp_ns = now;
-  message.envelope.source_generation = node.generation;
+  message.envelope = BuildEnvelope(node, sequence, trace);
   message.payload.assign(payload.begin(), payload.end());
   return message;
 }
 
 }  // namespace
+
+PublisherLoan::PublisherLoan(
+    TransportPublisherLoan loan, MessageEnvelope envelope) noexcept
+    : loan_(std::move(loan)), envelope_(envelope) {}
+
+std::span<std::byte> PublisherLoan::Data() noexcept {
+  return loan_.Data();
+}
+
+std::size_t PublisherLoan::size() noexcept {
+  return loan_.size();
+}
+
+PublisherLoan::operator bool() const noexcept {
+  return static_cast<bool>(loan_);
+}
+
+Status PublisherLoan::Publish() noexcept {
+  if (!loan_) {
+    return Status(StatusCode::Closed, "publisher loan is empty");
+  }
+  envelope_.publish_timestamp_ns = MonotonicNanoseconds();
+  return loan_.Publish(envelope_);
+}
+
+Status PublisherLoan::Abandon() noexcept {
+  return loan_.Abandon();
+}
 
 struct Publisher::Impl {
   NodeConfig node;
@@ -52,6 +89,21 @@ Status Publisher::Publish(std::span<const std::byte> payload,
       impl_->topic,
       BuildMessage(impl_->node, impl_->sequence, payload, trace),
       impl_->qos);
+}
+
+Result<PublisherLoan> Publisher::Loan(
+    std::size_t payload_size, TraceContext trace) const {
+  if (!impl_) {
+    return Status(StatusCode::Closed, "publisher is empty");
+  }
+  auto result = impl_->transport->Loan(
+      impl_->topic, payload_size, impl_->qos);
+  if (!result) {
+    return result.status();
+  }
+  return PublisherLoan(
+      std::move(result).take_value(),
+      BuildEnvelope(impl_->node, impl_->sequence, trace));
 }
 
 Publisher::operator bool() const noexcept { return impl_ != nullptr; }
@@ -181,6 +233,136 @@ Status Subscriber::Close() {
 }
 
 Subscriber::operator bool() const noexcept { return impl_ != nullptr; }
+
+struct LoanedSubscriber::Impl
+    : std::enable_shared_from_this<LoanedSubscriber::Impl> {
+  mutable std::mutex mutex;
+  bool closed{false};
+  bool scheduled{false};
+  std::deque<LoanedMessage> queue;
+  SubscriptionOptions options;
+  SubscriptionStats stats;
+  LoanedMessageCallback callback;
+  std::shared_ptr<Executor> executor;
+  std::shared_ptr<Transport> transport;
+  TaskId task_id{0U};
+  SubscriptionId subscription_id{0U};
+
+  ~Impl() { static_cast<void>(Close()); }
+
+  void Accept(TransportSubscriberSample sample) {
+    bool notify = false;
+    {
+      std::lock_guard lock(mutex);
+      if (closed) {
+        return;
+      }
+      ++stats.received_messages;
+      if (queue.size() >= options.queue_capacity) {
+        ++stats.dropped_messages;
+        if (options.overflow_policy == OverflowPolicy::DropNewest) {
+          return;
+        }
+        queue.pop_front();
+      }
+      queue.emplace_back(std::move(sample));
+      stats.queue_depth = queue.size();
+      stats.queue_high_watermark =
+          std::max(stats.queue_high_watermark, queue.size());
+      if (!scheduled) {
+        scheduled = true;
+        notify = true;
+      }
+    }
+    if (notify) {
+      const auto status = executor->Notify(task_id);
+      if (!status) {
+        std::lock_guard lock(mutex);
+        scheduled = false;
+      }
+    }
+  }
+
+  void ProcessOne() {
+    LoanedMessage message{TransportSubscriberSample{}};
+    {
+      std::lock_guard lock(mutex);
+      if (closed || queue.empty()) {
+        scheduled = false;
+        return;
+      }
+      message = std::move(queue.front());
+      queue.pop_front();
+      stats.queue_depth = queue.size();
+    }
+
+    try {
+      callback(message);
+    } catch (...) {
+      std::lock_guard lock(mutex);
+      ++stats.dropped_messages;
+    }
+    {
+      std::lock_guard lock(mutex);
+      ++stats.delivered_messages;
+    }
+
+    bool notify = false;
+    {
+      std::lock_guard lock(mutex);
+      if (closed || queue.empty()) {
+        scheduled = false;
+      } else {
+        notify = true;
+      }
+    }
+    if (notify) {
+      static_cast<void>(executor->Notify(task_id));
+    }
+  }
+
+  Status Close() {
+    SubscriptionId id = 0U;
+    {
+      std::lock_guard lock(mutex);
+      if (closed) {
+        return Status::Ok();
+      }
+      closed = true;
+      queue.clear();
+      stats.queue_depth = 0U;
+      scheduled = false;
+      id = subscription_id;
+    }
+    const auto unsubscribe_status = transport->Unsubscribe(id);
+    static_cast<void>(executor->Cancel(task_id));
+    if (!unsubscribe_status &&
+        unsubscribe_status.code() != StatusCode::NotFound) {
+      return unsubscribe_status;
+    }
+    return Status::Ok();
+  }
+
+  [[nodiscard]] SubscriptionStats Snapshot() const {
+    std::lock_guard lock(mutex);
+    return stats;
+  }
+};
+
+LoanedSubscriber::LoanedSubscriber(std::shared_ptr<Impl> impl)
+    : impl_(std::move(impl)) {}
+
+SubscriptionStats LoanedSubscriber::Stats() const {
+  return impl_ ? impl_->Snapshot() : SubscriptionStats{};
+}
+
+Status LoanedSubscriber::Close() {
+  return impl_ ? impl_->Close() : Status::Ok();
+}
+
+LoanedSubscriber::operator bool() const noexcept {
+  return impl_ != nullptr;
+}
 
 struct Service::Impl : std::enable_shared_from_this<Service::Impl> {
   struct PendingCall {
@@ -469,6 +651,56 @@ Result<Subscriber> Node::CreateSubscriber(
   }
   impl->subscription_id = subscription_result.value();
   return Subscriber(std::move(impl));
+}
+
+Result<LoanedSubscriber> Node::CreateLoanedSubscriber(
+    std::string topic, SubscriptionOptions options,
+    LoanedMessageCallback callback) const {
+  if (topic.empty() || options.queue_capacity == 0U ||
+      options.qos.depth == 0U || !callback) {
+    return Status(StatusCode::InvalidArgument,
+                  "invalid loaned subscriber configuration");
+  }
+
+  auto impl = std::make_shared<LoanedSubscriber::Impl>();
+  impl->options = options;
+  impl->callback = std::move(callback);
+  impl->executor = executor_;
+  impl->transport = transport_;
+
+  TaskConfig task_config;
+  task_config.name =
+      config_.name + ":loaned-subscription:" + topic;
+  task_config.kind = TaskKind::Event;
+  task_config.deadline = options.qos.deadline;
+  task_config.queue_capacity = 1U;
+  task_config.callback_group = options.callback_group;
+  std::weak_ptr<LoanedSubscriber::Impl> weak = impl;
+  auto task_result = executor_->AddTask(
+      std::move(task_config),
+      [weak](std::stop_token) {
+        if (auto state = weak.lock()) {
+          state->ProcessOne();
+        }
+      });
+  if (!task_result) {
+    return task_result.status();
+  }
+  impl->task_id = task_result.value();
+
+  auto subscription_result = transport_->SubscribeLoaned(
+      topic, options.qos,
+      [weak](TransportSubscriberSample sample) {
+        if (auto state = weak.lock()) {
+          state->Accept(std::move(sample));
+        }
+      });
+  if (!subscription_result) {
+    static_cast<void>(executor_->Cancel(impl->task_id));
+    return subscription_result.status();
+  }
+  impl->subscription_id = subscription_result.value();
+  return LoanedSubscriber(std::move(impl));
 }
 
 Result<Service> Node::CreateService(

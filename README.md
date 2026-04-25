@@ -7,28 +7,29 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 
 | 领域 | 当前行为 |
 | --- | --- |
-| Runtime API | `Node`、`Publisher`、`Subscriber`、`Service`、`Client`、`Timer`、`Executor`、`Transport`、`HealthMonitor` |
+| Runtime API | `Node`、`Publisher`/`PublisherLoan`、`Subscriber`/`LoanedSubscriber`、`Service`、`Client`、`Timer`、`Executor`、`Transport`、`HealthMonitor` |
 | 调度 | Periodic、Event、Async task；有界优先级队列；callback group；配置化 CPU affinity；可选 `SCHED_FIFO` 与显式权限降级；绝对周期释放；Warn/Degrade/Drop；P50/P95/P99/P99.9/MAX |
-| Pub/sub | 每 subscription 独立 queue、DropNewest/DropOldest overflow、slow-callback isolation、versioned message envelope |
+| Pub/sub | 每 subscription 独立 queue、DropNewest/DropOldest overflow、slow-callback isolation、versioned envelope；FastIPC callback-scoped loan |
 | Service | in-memory 与 Cyclone DDS 上的 deadline-bounded request/reply；request ID、typed error/timeout、bounded service queue |
-| Transport | in-memory、FastIPC shared memory，以及可选的真实 Cyclone DDS 11.0.1 pub/sub + Request/Response adapter |
+| Transport | in-memory、FastIPC copy + 端到端 loan/shared memory，以及可选的真实 Cyclone DDS 11.0.1 pub/sub + Request/Response adapter |
 | 恢复 | heartbeat、progress、backlog、deadline miss、process exit evaluation；generation-aware cleanup/start/reconnect hook |
 | 可观测性 | counter、gauge、bounded histogram、JSON log、trace span、E2E latency、CPU/RSS/context-switch snapshot |
 | Record/Replay | versioned little-endian trace、CRC32、bounded async recorder、strict/continue failure policy、原速/加速/最快/单步重放 |
 | 分布式切片 | 带 bounded membership 与 lease expiry 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
+| 对比基准 | 两进程 request/echo；FastIPC copy/loan、AutoRuntime DDS、可选 rclcpp + DDS；full-touch、exact counter、P50/P95/P99/P99.9/MAX、CPU/context switch/RSS |
 | 验证 | 固定提交 `b2bc5c6b0517`：轻依赖 35/35；DDS Debug/ASan/UBSan/TSan 各 42/42；Release 43/43；DDS RPC TSan aggregate 连续 20 次通过；历史外部 Cyclone 竞态仍使完整 DDS TSan 状态为 **INCOMPLETE** |
 
 ## 架构
 
 ```text
 Node API
-  |-- Publisher / Subscriber / Service / Client / Timer
+  |-- Publisher(/Loan) / Subscriber(/Loaned) / Service / Client / Timer
   |          |
   |          +--> Executor callback groups and bounded queues
   |
   +--> Transport interface
          |-- InMemoryTransport
-         |-- FastIpcTransport --> ../fastipc
+         |-- FastIpcTransport --> ../fastipc copy + shared-chunk loan
          +-- DdsTransport -----> Cyclone DDS 11.0.1 pub/sub + RPC
 
 HealthMonitor   Metrics / Logs / Traces   Record / Replay   Discovery / RPC
@@ -79,6 +80,7 @@ projects/autoruntime/build-verify-release/autoruntime_priority_inversion_experim
 projects/autoruntime/build-verify-release/autoruntime_record_replay_experiment
 projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
 projects/autoruntime/build-verify-release/autoruntime_dds_rpc_benchmark
+projects/autoruntime/build-verify-release/autoruntime_comparative_benchmark
 ```
 
 测量结果与原始 JSON：
@@ -94,6 +96,8 @@ projects/autoruntime/build-verify-release/autoruntime_dds_rpc_benchmark
 - [DDS Request/Response 设计](docs/dds-rpc-design.md)
 - [Pub/Sub 与 Request/Response 选择](docs/pubsub-vs-rpc.md)
 - [DDS Request/Response 基准方法](docs/dds-rpc-benchmark.md)
+- [FastIPC 零复制集成](docs/zero-copy-integration.md)
+- [统一对比基准方法与边界](docs/benchmark.md)
 - [故障注入矩阵](docs/fault-injection.md)
 - [恢复设计与 crash test](docs/recovery.md)
 
@@ -110,7 +114,7 @@ projects/autoruntime/build-verify-release/autoruntime_dds_rpc_benchmark
 ## 已知局限
 
 - `HealthMonitor` 提供 policy 与 recovery hook，不是 privileged process supervisor 或 deployment daemon。
-- FastIPC adapter 仍只实现 pub/sub；Cyclone DDS adapter 已支持 AutoRuntime 私有 topic-based Request/Response v1，但不兼容 OMG DDS-RPC 或 ROS 2 service wire protocol。
+- FastIPC adapter 只实现 pub/sub，但同机路径已支持 copy 与 callback-scoped loan；service 仍返回 `Unsupported`。Cyclone DDS adapter 支持私有 topic-based Request/Response v1，但不兼容 OMG DDS-RPC 或 ROS 2 service wire protocol，也不支持 DDS loan。
 - DDS RPC 不自动 retry、去重或提供 exactly-once；missing service 到 deadline 返回 `Timeout`，这不能证明 remote node 已死。当前仅验证同机两个真实 participant，跨主机证据仍为 **INCOMPLETE**。
 - `Executor::Stop(Deadline)` 会请求 cooperative stop 并 join 所有 worker，但尚未执行传入的 deadline。忽略 stop token 的 callback 可无限拖延 shutdown。
 - task priority 只决定 callback group 内已排队 job 的顺序；worker 的 CPU affinity 与可选 `SCHED_FIFO` 是另一层配置，仍不提供 callback 抢占、准入控制或 WCET 证明。
@@ -120,3 +124,5 @@ projects/autoruntime/build-verify-release/autoruntime_dds_rpc_benchmark
 - Record/Replay 当前只记录 pub/sub publish attempt，不记录 receive、delivery result 或 service/RPC；Recorder 会复制 payload 并竞争入队锁，尚未与 FastIPC loan 打通。
 - trace 的 CRC32 用于损坏检测，不提供认证或抗恶意篡改；当前也没有 rotation、index、compression 或跨版本 schema migration。
 - WSL2 benchmark 仅是比较证据，不代表 target-hardware 或 hard real-time guarantee。
+- 对比 runner 当前只验证同机双进程；真正跨主机的 rclcpp DDS vs AutoRuntime DDS 结果仍为 **INCOMPLETE**，不能用 loopback 数字代替。
+- rclcpp baseline 使用 Jazzy 容器内 Cyclone DDS 0.10.5，AutoRuntime 固定 11.0.1；结果比较完整路径，不能把差值全部归因于 runtime framework。

@@ -10,7 +10,7 @@ module autoruntime_dds {
     unsigned long long publish_timestamp_ns;
     unsigned long long source_generation;
     long priority;
-    sequence<octet, 1048576> payload;
+    sequence<octet, 4194304> payload;
   };
 
   @final

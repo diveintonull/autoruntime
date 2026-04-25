@@ -41,6 +41,11 @@ struct WireHeader {
 };
 static_assert(sizeof(WireHeader) == 80U);
 
+struct DecodedView {
+  MessageEnvelope envelope;
+  std::span<const std::byte> payload;
+};
+
 [[nodiscard]] Status MapStatus(const fastipc::Status& status) {
   using FastCode = fastipc::StatusCode;
   switch (status.code()) {
@@ -77,6 +82,23 @@ static_assert(sizeof(WireHeader) == 80U);
   return Status(StatusCode::TransportError, "unknown FastIPC status");
 }
 
+void WriteHeader(std::span<std::byte> wire,
+                 const MessageEnvelope& envelope,
+                 std::uint32_t payload_bytes) noexcept {
+  WireHeader header;
+  header.envelope_version = envelope.version;
+  header.trace_id = envelope.trace_id;
+  header.span_id = envelope.span_id;
+  header.parent_span_id = envelope.parent_span_id;
+  header.sequence = envelope.sequence;
+  header.source_timestamp_ns = envelope.source_timestamp_ns;
+  header.publish_timestamp_ns = envelope.publish_timestamp_ns;
+  header.source_generation = envelope.source_generation;
+  header.priority = envelope.priority;
+  header.payload_bytes = payload_bytes;
+  std::memcpy(wire.data(), &header, sizeof(header));
+}
+
 [[nodiscard]] Result<std::vector<std::byte>> Encode(
     const Message& message, std::uint32_t maximum_payload) {
   if (message.payload.size() > maximum_payload ||
@@ -86,30 +108,22 @@ static_assert(sizeof(WireHeader) == 80U);
                   "message exceeds configured FastIPC payload limit");
   }
 
-  WireHeader header;
-  header.envelope_version = message.envelope.version;
-  header.trace_id = message.envelope.trace_id;
-  header.span_id = message.envelope.span_id;
-  header.parent_span_id = message.envelope.parent_span_id;
-  header.sequence = message.envelope.sequence;
-  header.source_timestamp_ns = message.envelope.source_timestamp_ns;
-  header.publish_timestamp_ns = message.envelope.publish_timestamp_ns;
-  header.source_generation = message.envelope.source_generation;
-  header.priority = message.envelope.priority;
-  header.payload_bytes =
-      static_cast<std::uint32_t>(message.payload.size());
-
-  std::vector<std::byte> wire(sizeof(header) + message.payload.size());
-  std::memcpy(wire.data(), &header, sizeof(header));
+  std::vector<std::byte> wire(
+      sizeof(WireHeader) + message.payload.size());
+  WriteHeader(
+      wire, message.envelope,
+      static_cast<std::uint32_t>(message.payload.size()));
   if (!message.payload.empty()) {
-    std::memcpy(wire.data() + sizeof(header), message.payload.data(),
+    std::memcpy(wire.data() + sizeof(WireHeader),
+                message.payload.data(),
                 message.payload.size());
   }
   return wire;
 }
 
-[[nodiscard]] Result<Message> Decode(std::span<const std::byte> wire,
-                                     std::uint32_t maximum_payload) {
+[[nodiscard]] Result<DecodedView> DecodeView(
+    std::span<const std::byte> wire,
+    std::uint32_t maximum_payload) {
   if (wire.size() < sizeof(WireHeader)) {
     return Status(StatusCode::TransportError,
                   "FastIPC frame is smaller than its header");
@@ -132,23 +146,152 @@ static_assert(sizeof(WireHeader) == 80U);
                   "FastIPC frame payload length is invalid");
   }
 
-  Message message;
-  message.envelope.version = header.envelope_version;
-  message.envelope.trace_id = header.trace_id;
-  message.envelope.span_id = header.span_id;
-  message.envelope.parent_span_id = header.parent_span_id;
-  message.envelope.sequence = header.sequence;
-  message.envelope.source_timestamp_ns = header.source_timestamp_ns;
-  message.envelope.publish_timestamp_ns = header.publish_timestamp_ns;
-  message.envelope.source_generation = header.source_generation;
-  message.envelope.priority = header.priority;
-  message.payload.resize(payload_bytes);
-  if (payload_bytes != 0U) {
-    std::memcpy(message.payload.data(), wire.data() + sizeof(WireHeader),
-                payload_bytes);
+  DecodedView result;
+  result.envelope.version = header.envelope_version;
+  result.envelope.trace_id = header.trace_id;
+  result.envelope.span_id = header.span_id;
+  result.envelope.parent_span_id = header.parent_span_id;
+  result.envelope.sequence = header.sequence;
+  result.envelope.source_timestamp_ns = header.source_timestamp_ns;
+  result.envelope.publish_timestamp_ns = header.publish_timestamp_ns;
+  result.envelope.source_generation = header.source_generation;
+  result.envelope.priority = header.priority;
+  result.payload = wire.subspan(sizeof(WireHeader), payload_bytes);
+  return result;
+}
+
+[[nodiscard]] Result<Message> Decode(
+    std::span<const std::byte> wire,
+    std::uint32_t maximum_payload) {
+  auto decoded = DecodeView(wire, maximum_payload);
+  if (!decoded) {
+    return decoded.status();
   }
+  Message message;
+  message.envelope = decoded.value().envelope;
+  message.payload.assign(
+      decoded.value().payload.begin(), decoded.value().payload.end());
   return message;
 }
+
+[[nodiscard]] fastipc::SendOptions SendOptionsFor(
+    const QosProfile& qos) {
+  fastipc::SendOptions options;
+  if (qos.reliability == Reliability::BestEffort) {
+    options.policy = fastipc::BackpressurePolicy::Drop;
+    options.deadline = fastipc::Deadline::Immediate();
+    return options;
+  }
+  options.policy = fastipc::BackpressurePolicy::Timeout;
+  const auto timeout =
+      qos.deadline > std::chrono::nanoseconds::zero()
+          ? qos.deadline
+          : std::chrono::duration_cast<std::chrono::nanoseconds>(
+                kDefaultSendDeadline);
+  options.deadline = fastipc::Deadline::After(timeout);
+  return options;
+}
+
+struct AdapterStats {
+  mutable std::mutex mutex;
+  TransportStats value;
+
+  void CountPublished() {
+    std::lock_guard lock(mutex);
+    ++value.published_messages;
+  }
+  void CountPublishFailure() {
+    std::lock_guard lock(mutex);
+    ++value.publish_failures;
+  }
+  void CountDelivered() {
+    std::lock_guard lock(mutex);
+    ++value.delivered_messages;
+  }
+  void CountDropped() {
+    std::lock_guard lock(mutex);
+    ++value.dropped_messages;
+  }
+  [[nodiscard]] TransportStats Snapshot() const {
+    std::lock_guard lock(mutex);
+    return value;
+  }
+};
+
+class FastIpcPublisherLoanBackend final
+    : public TransportPublisherLoan::Backend {
+ public:
+  FastIpcPublisherLoanBackend(
+      fastipc::PublisherLoan loan,
+      std::shared_ptr<AdapterStats> stats)
+      : loan_(std::move(loan)),
+        stats_(std::move(stats)) {}
+
+  [[nodiscard]] std::span<std::byte> Data() noexcept override {
+    auto wire = loan_.Data();
+    if (wire.size() < sizeof(WireHeader)) {
+      return {};
+    }
+    return wire.subspan(sizeof(WireHeader));
+  }
+
+  Status Publish(
+      const MessageEnvelope& envelope) noexcept override {
+    auto wire = loan_.Data();
+    if (wire.size() < sizeof(WireHeader) ||
+        Data().size() > std::numeric_limits<std::uint32_t>::max()) {
+      static_cast<void>(loan_.Abandon());
+      stats_->CountPublishFailure();
+      return Status(
+          StatusCode::Internal,
+          "FastIPC publisher loan has an invalid wire span");
+    }
+    WriteHeader(
+        wire, envelope, static_cast<std::uint32_t>(Data().size()));
+    const auto status = MapStatus(loan_.Publish());
+    if (status) {
+      stats_->CountPublished();
+    } else {
+      stats_->CountPublishFailure();
+      if (status.code() == StatusCode::Dropped) {
+        stats_->CountDropped();
+      }
+    }
+    return status;
+  }
+
+  Status Abandon() noexcept override {
+    return MapStatus(loan_.Abandon());
+  }
+
+ private:
+  fastipc::PublisherLoan loan_;
+  std::shared_ptr<AdapterStats> stats_;
+};
+
+class FastIpcSubscriberSampleBackend final
+    : public TransportSubscriberSample::Backend {
+ public:
+  explicit FastIpcSubscriberSampleBackend(
+      fastipc::SubscriberSample sample)
+      : sample_(std::move(sample)) {}
+
+  [[nodiscard]] std::span<const std::byte> Data()
+      const noexcept override {
+    const auto wire = sample_.Data();
+    if (wire.size() < sizeof(WireHeader)) {
+      return {};
+    }
+    return wire.subspan(sizeof(WireHeader));
+  }
+
+  Status Release() noexcept override {
+    return MapStatus(sample_.Release());
+  }
+
+ private:
+  fastipc::SubscriberSample sample_;
+};
 
 [[nodiscard]] fastipc::ChannelConfig ChannelConfigFor(
     const FastIpcEndpointConfig& endpoint) {
@@ -172,6 +315,7 @@ struct FastIpcTransport::Impl {
     std::mutex send_mutex;
     std::mutex callback_mutex;
     TransportMessageCallback callback;
+    TransportLoanedMessageCallback loaned_callback;
     QosProfile qos;
     SubscriptionId subscription_id{0U};
     std::jthread receiver;
@@ -182,16 +326,14 @@ struct FastIpcTransport::Impl {
   SubscriptionId next_subscription_id{1U};
   std::unordered_map<std::string, std::shared_ptr<Endpoint>> endpoints;
   std::unordered_map<SubscriptionId, std::shared_ptr<Endpoint>> subscriptions;
-  mutable std::mutex stats_mutex;
-  TransportStats stats;
+  std::shared_ptr<AdapterStats> stats{std::make_shared<AdapterStats>()};
 
   void CountPublishFailure() {
-    std::lock_guard lock(stats_mutex);
-    ++stats.publish_failures;
+    stats->CountPublishFailure();
   }
 
-  void ReceiveLoop(const std::shared_ptr<Endpoint>& endpoint,
-                   std::stop_token stop_token) {
+  void ReceiveCopyLoop(const std::shared_ptr<Endpoint>& endpoint,
+                       std::stop_token stop_token) {
     const auto wire_capacity =
         sizeof(WireHeader) +
         static_cast<std::size_t>(endpoint->config.max_payload_size);
@@ -212,8 +354,7 @@ struct FastIpcTransport::Impl {
         if (code == fastipc::StatusCode::Closed) {
           return;
         }
-        std::lock_guard lock(stats_mutex);
-        ++stats.dropped_messages;
+        stats->CountDropped();
         continue;
       }
 
@@ -221,8 +362,7 @@ struct FastIpcTransport::Impl {
           std::span<const std::byte>(buffer.data(), result.value()),
           endpoint->config.max_payload_size);
       if (!decoded) {
-        std::lock_guard lock(stats_mutex);
-        ++stats.dropped_messages;
+        stats->CountDropped();
         continue;
       }
 
@@ -232,17 +372,69 @@ struct FastIpcTransport::Impl {
         callback = endpoint->callback;
       }
       if (!callback) {
-        std::lock_guard lock(stats_mutex);
-        ++stats.dropped_messages;
+        stats->CountDropped();
         continue;
       }
       try {
         callback(std::move(decoded).take_value());
-        std::lock_guard lock(stats_mutex);
-        ++stats.delivered_messages;
+        stats->CountDelivered();
       } catch (...) {
-        std::lock_guard lock(stats_mutex);
-        ++stats.dropped_messages;
+        stats->CountDropped();
+      }
+    }
+  }
+
+  void ReceiveLoanedLoop(
+      const std::shared_ptr<Endpoint>& endpoint,
+      std::stop_token stop_token) {
+    while (!stop_token.stop_requested()) {
+      auto result = endpoint->channel->Take(
+          fastipc::Deadline::After(kReceivePollInterval));
+      if (!result) {
+        const auto code = result.status().code();
+        if (code == fastipc::StatusCode::Timeout ||
+            code == fastipc::StatusCode::PeerUnavailable ||
+            code == fastipc::StatusCode::PeerDead) {
+          if (code == fastipc::StatusCode::PeerDead) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+          }
+          continue;
+        }
+        if (code == fastipc::StatusCode::Closed) {
+          return;
+        }
+        stats->CountDropped();
+        continue;
+      }
+
+      auto raw_sample = std::move(result).take_value();
+      auto decoded = DecodeView(
+          raw_sample.Data(), endpoint->config.max_payload_size);
+      if (!decoded) {
+        stats->CountDropped();
+        continue;
+      }
+
+      TransportLoanedMessageCallback callback;
+      {
+        std::lock_guard lock(endpoint->callback_mutex);
+        callback = endpoint->loaned_callback;
+      }
+      if (!callback) {
+        stats->CountDropped();
+        continue;
+      }
+
+      try {
+        auto backend =
+            std::make_unique<FastIpcSubscriberSampleBackend>(
+                std::move(raw_sample));
+        TransportSubscriberSample sample(
+            decoded.value().envelope, std::move(backend));
+        callback(std::move(sample));
+        stats->CountDelivered();
+      } catch (...) {
+        stats->CountDropped();
       }
     }
   }
@@ -340,19 +532,7 @@ Status FastIpcTransport::Publish(std::string_view topic, Message message,
     return encoded.status();
   }
 
-  fastipc::SendOptions options;
-  if (qos.reliability == Reliability::BestEffort) {
-    options.policy = fastipc::BackpressurePolicy::Drop;
-    options.deadline = fastipc::Deadline::Immediate();
-  } else {
-    options.policy = fastipc::BackpressurePolicy::Timeout;
-    const auto timeout =
-        qos.deadline > std::chrono::nanoseconds::zero()
-            ? qos.deadline
-            : std::chrono::duration_cast<std::chrono::nanoseconds>(
-                  kDefaultSendDeadline);
-    options.deadline = fastipc::Deadline::After(timeout);
-  }
+  const auto options = SendOptionsFor(qos);
 
   fastipc::Status send_status;
   {
@@ -363,16 +543,57 @@ Status FastIpcTransport::Publish(std::string_view topic, Message message,
     impl_->CountPublishFailure();
     const auto mapped = MapStatus(send_status);
     if (mapped.code() == StatusCode::Dropped) {
-      std::lock_guard lock(impl_->stats_mutex);
-      ++impl_->stats.dropped_messages;
+      impl_->stats->CountDropped();
     }
     return mapped;
   }
-  {
-    std::lock_guard lock(impl_->stats_mutex);
-    ++impl_->stats.published_messages;
-  }
+  impl_->stats->CountPublished();
   return Status::Ok();
+}
+
+Result<TransportPublisherLoan> FastIpcTransport::Loan(
+    std::string_view topic, std::size_t payload_size,
+    const QosProfile& qos) {
+  std::shared_ptr<Impl::Endpoint> endpoint;
+  {
+    std::lock_guard lock(impl_->mutex);
+    if (impl_->closed) {
+      impl_->CountPublishFailure();
+      return Status(StatusCode::Closed, "FastIPC transport is closed");
+    }
+    const auto iterator = impl_->endpoints.find(std::string(topic));
+    if (iterator == impl_->endpoints.end() ||
+        iterator->second->config.direction !=
+            FastIpcDirection::Publish) {
+      impl_->CountPublishFailure();
+      return Status(StatusCode::NotFound,
+                    "FastIPC publish endpoint is not configured");
+    }
+    endpoint = iterator->second;
+  }
+  if (payload_size > endpoint->config.max_payload_size) {
+    impl_->CountPublishFailure();
+    return Status(
+        StatusCode::InvalidArgument,
+        "loan exceeds configured FastIPC payload limit");
+  }
+
+  std::unique_lock send_lock(endpoint->send_mutex);
+  auto result = endpoint->channel->Loan(
+      sizeof(WireHeader) + payload_size, SendOptionsFor(qos));
+  if (!result) {
+    impl_->CountPublishFailure();
+    const auto mapped = MapStatus(result.status());
+    if (mapped.code() == StatusCode::Dropped) {
+      impl_->stats->CountDropped();
+    }
+    return mapped;
+  }
+
+  auto backend = std::make_unique<FastIpcPublisherLoanBackend>(
+      std::move(result).take_value(), impl_->stats);
+  send_lock.unlock();
+  return TransportPublisherLoan(std::move(backend));
 }
 
 Result<SubscriptionId> FastIpcTransport::Subscribe(
@@ -414,7 +635,7 @@ Result<SubscriptionId> FastIpcTransport::Subscribe(
   try {
     endpoint->receiver = std::jthread(
         [this, endpoint](std::stop_token stop_token) {
-          impl_->ReceiveLoop(endpoint, stop_token);
+          impl_->ReceiveCopyLoop(endpoint, stop_token);
         });
   } catch (const std::system_error& error) {
     {
@@ -425,6 +646,62 @@ Result<SubscriptionId> FastIpcTransport::Subscribe(
     return Status(StatusCode::Internal,
                   std::string("failed to start FastIPC receiver: ") +
                       error.what());
+  }
+  return id;
+}
+
+Result<SubscriptionId> FastIpcTransport::SubscribeLoaned(
+    std::string_view topic, const QosProfile& qos,
+    TransportLoanedMessageCallback callback) {
+  if (!callback || qos.depth == 0U) {
+    return Status(
+        StatusCode::InvalidArgument,
+        "FastIPC loaned subscription requires callback and depth");
+  }
+
+  std::shared_ptr<Impl::Endpoint> endpoint;
+  SubscriptionId id = 0U;
+  {
+    std::lock_guard lock(impl_->mutex);
+    if (impl_->closed) {
+      return Status(StatusCode::Closed, "FastIPC transport is closed");
+    }
+    const auto iterator = impl_->endpoints.find(std::string(topic));
+    if (iterator == impl_->endpoints.end() ||
+        iterator->second->config.direction !=
+            FastIpcDirection::Subscribe) {
+      return Status(StatusCode::NotFound,
+                    "FastIPC subscribe endpoint is not configured");
+    }
+    endpoint = iterator->second;
+    if (endpoint->subscription_id != 0U) {
+      return Status(StatusCode::AlreadyExists,
+                    "FastIPC SPSC endpoint already has a subscriber");
+    }
+    id = impl_->next_subscription_id++;
+    endpoint->subscription_id = id;
+    impl_->subscriptions.emplace(id, endpoint);
+  }
+  {
+    std::lock_guard lock(endpoint->callback_mutex);
+    endpoint->qos = qos;
+    endpoint->loaned_callback = std::move(callback);
+  }
+  try {
+    endpoint->receiver = std::jthread(
+        [this, endpoint](std::stop_token stop_token) {
+          impl_->ReceiveLoanedLoop(endpoint, stop_token);
+        });
+  } catch (const std::system_error& error) {
+    {
+      std::lock_guard lock(impl_->mutex);
+      impl_->subscriptions.erase(id);
+      endpoint->subscription_id = 0U;
+    }
+    return Status(
+        StatusCode::Internal,
+        std::string("failed to start FastIPC loaned receiver: ") +
+            error.what());
   }
   return id;
 }
@@ -445,6 +722,7 @@ Status FastIpcTransport::Unsubscribe(SubscriptionId subscription_id) {
   {
     std::lock_guard lock(endpoint->callback_mutex);
     endpoint->callback = {};
+    endpoint->loaned_callback = {};
   }
   endpoint->receiver.request_stop();
   endpoint->channel->Close();
@@ -478,8 +756,7 @@ Result<Message> FastIpcTransport::Request(
 }
 
 TransportStats FastIpcTransport::Stats() const {
-  std::lock_guard lock(impl_->stats_mutex);
-  return impl_->stats;
+  return impl_->stats->Snapshot();
 }
 
 Status FastIpcTransport::Close() {

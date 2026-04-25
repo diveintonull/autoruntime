@@ -20,7 +20,7 @@
 namespace autoruntime {
 namespace {
 
-constexpr std::size_t kIdlMaximumPayload = 1024U * 1024U;
+constexpr std::size_t kIdlMaximumPayload = 4U * 1024U * 1024U;
 
 struct QosDeleter {
   void operator()(dds_qos_t* qos) const noexcept {

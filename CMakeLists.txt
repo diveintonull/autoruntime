@@ -220,6 +220,30 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     autoruntime_enable_warnings(autoruntime_fastipc_transport_test)
     add_test(NAME autoruntime.fastipc_transport
       COMMAND autoruntime_fastipc_transport_test)
+
+    add_executable(autoruntime_fastipc_loaned_transport_test
+      tests/loaned_fastipc_transport_test.cpp)
+    target_link_libraries(autoruntime_fastipc_loaned_transport_test
+      PRIVATE AutoRuntime::autoruntime Threads::Threads)
+    autoruntime_enable_warnings(
+      autoruntime_fastipc_loaned_transport_test)
+    add_test(NAME autoruntime.fastipc.loaned
+      COMMAND autoruntime_fastipc_loaned_transport_test)
+    set(AUTORUNTIME_FASTIPC_LOAN_CASES
+      unsupported
+      end_to_end
+      backpressure)
+    foreach(fastipc_loan_case IN LISTS AUTORUNTIME_FASTIPC_LOAN_CASES)
+      add_test(NAME autoruntime.fastipc.loaned.${fastipc_loan_case}
+        COMMAND autoruntime_fastipc_loaned_transport_test
+                --case ${fastipc_loan_case})
+      set_tests_properties(
+        autoruntime.fastipc.loaned.${fastipc_loan_case}
+        PROPERTIES LABELS "zero_copy")
+    endforeach()
+    set_tests_properties(
+      autoruntime.fastipc.loaned.backpressure
+      PROPERTIES LABELS "zero_copy;fault")
   endif()
 
   if(AUTORUNTIME_ENABLE_DDS)
@@ -371,6 +395,42 @@ if(AUTORUNTIME_BUILD_BENCHMARKS AND UNIX)
     AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}")
   autoruntime_enable_warnings(
     autoruntime_record_replay_experiment)
+endif()
+
+if(AUTORUNTIME_BUILD_BENCHMARKS AND UNIX AND AUTORUNTIME_ENABLE_FASTIPC)
+  add_executable(autoruntime_comparative_benchmark
+    benchmarks/comparative_benchmark.cpp)
+  target_link_libraries(autoruntime_comparative_benchmark
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  target_compile_definitions(
+    autoruntime_comparative_benchmark PRIVATE
+    AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}"
+    AUTORUNTIME_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    AUTORUNTIME_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+  autoruntime_enable_warnings(autoruntime_comparative_benchmark)
+
+  if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
+    add_test(NAME autoruntime.comparative.fastipc_copy.smoke
+      COMMAND autoruntime_comparative_benchmark
+              --self-test --mode fastipc-copy)
+    add_test(NAME autoruntime.comparative.fastipc_loan.smoke
+      COMMAND autoruntime_comparative_benchmark
+              --self-test --mode fastipc-loan)
+    set_tests_properties(
+      autoruntime.comparative.fastipc_copy.smoke
+      autoruntime.comparative.fastipc_loan.smoke
+      PROPERTIES TIMEOUT 20 LABELS "benchmark;comparative")
+
+    if(AUTORUNTIME_ENABLE_DDS)
+      add_test(NAME autoruntime.comparative.dds.smoke
+        COMMAND autoruntime_comparative_benchmark
+                --self-test --mode dds)
+      set_tests_properties(
+        autoruntime.comparative.dds.smoke
+        PROPERTIES TIMEOUT 30
+                   LABELS "benchmark;comparative;dds")
+    endif()
+  endif()
 endif()
 
 if(AUTORUNTIME_BUILD_BENCHMARKS)
