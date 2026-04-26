@@ -17,7 +17,7 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 | Record/Replay | versioned little-endian trace、CRC32、bounded async recorder、strict/continue failure policy、原速/加速/最快/单步重放 |
 | 分布式切片 | 带 bounded membership 与 lease expiry 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
 | 对比基准 | 两进程 request/echo；FastIPC copy/loan、AutoRuntime DDS、可选 rclcpp + DDS；full-touch、exact counter、P50/P95/P99/P99.9/MAX、CPU/context switch/RSS |
-| 验证 | 固定提交 `b2bc5c6b0517`：轻依赖 35/35；DDS Debug/ASan/UBSan/TSan 各 42/42；Release 43/43；DDS RPC TSan aggregate 连续 20 次通过；历史外部 Cyclone 竞态仍使完整 DDS TSan 状态为 **INCOMPLETE** |
+| 验证 | 固定提交 `d25967384beb`：轻依赖 41/41；DDS Debug/ASan/UBSan/TSan 各 46/46；Release 50/50；DDS RPC TSan aggregate 连续 20 次通过；历史外部 Cyclone 竞态仍使完整 DDS TSan 状态为 **INCOMPLETE** |
 
 ## 架构
 
@@ -49,7 +49,7 @@ cmake --build projects/autoruntime/build
 ctest --test-dir projects/autoruntime/build --output-on-failure
 ```
 
-DDS 默认为关闭，因此上述命令只需要 CMake、Ninja、C++20 compiler、pthreads 和相邻 FastIPC 项目。当前轻依赖构建注册 35 个测试，并通过 35/35。
+DDS 默认为关闭，因此上述命令只需要 CMake、Ninja、C++20 compiler、pthreads 和相邻 FastIPC 项目。当前轻依赖构建注册 41 个测试，并通过 41/41。
 
 运行 sensor -> planning -> control 示例：
 
@@ -66,7 +66,7 @@ projects/autoruntime/scripts/bootstrap_cyclonedds.sh
 projects/autoruntime/scripts/run_test_matrix.sh all
 ```
 
-矩阵明确设置 `AUTORUNTIME_ENABLE_DDS=ON`，并运行 Debug、Release、ASan、UBSan、TSan。固定 revision 的日志与 WSL2 TSan 启动说明见 [testing.md](docs/testing.md)。当前提交的完整 DDS TSan 为 42/42，DDS RPC aggregate test 连续 20 次通过；但历史上重复 participant-loss 已复现 Cyclone DDS 11.0.1 库内 SPDP 竞态。该失败没有被过滤，完整 DDS TSan 总体状态仍为 **INCOMPLETE**。
+矩阵明确设置 `AUTORUNTIME_ENABLE_DDS=ON`，并运行 Debug、Release、ASan、UBSan、TSan。固定 revision 的日志与 WSL2 TSan 启动说明见 [testing.md](docs/testing.md)。当前提交的完整 DDS TSan 为 46/46，DDS RPC aggregate test 连续 20 次通过；但历史上重复 participant-loss 已复现 Cyclone DDS 11.0.1 库内 SPDP 竞态。该失败没有被过滤，完整 DDS TSan 总体状态仍为 **INCOMPLETE**。
 
 ## 实验与证据
 
@@ -98,6 +98,7 @@ projects/autoruntime/build-verify-release/autoruntime_comparative_benchmark
 - [DDS Request/Response 基准方法](docs/dds-rpc-benchmark.md)
 - [FastIPC 零复制集成](docs/zero-copy-integration.md)
 - [统一对比基准方法与边界](docs/benchmark.md)
+- [统一对比基准正式结果](docs/comparative-benchmark-results.md)
 - [故障注入矩阵](docs/fault-injection.md)
 - [恢复设计与 crash test](docs/recovery.md)
 

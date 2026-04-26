@@ -82,7 +82,7 @@ warmup sequence 使用独立高位 namespace。进入测量边界时父子两进
 - `user_cpu_ms/system_cpu_ms`：initiator 与 responder 的 `getrusage` 增量之和；
 - `cpu_utilization_percent`：两进程 CPU time / 实际测量加 drain wall time，可超过 100%；
 - context switch：两个进程 voluntary/involuntary 增量之和；
-- RSS：分别记录 initiator 与 responder peak RSS，不相加后冒充单进程 footprint。
+- RSS：分别记录 initiator 与 responder peak RSS，不相加后冒充单进程 footprint。initiator 是跨 case 复用的长生命周期进程，`ru_maxrss` 会保留较早 case 的高水位并受运行顺序影响；responder 每 case 都是新进程。因此 initiator peak 已记录但不适合直接做跨行 footprint 结论。
 
 P99.9 在 300 个样本的默认单 trial 中接近尾部最大值，统计置信度有限；报告必须同时展示三个 trial 和 MAX，不把 P99.9 当成稳定 SLO 估计。
 
@@ -137,7 +137,7 @@ projects/autoruntime/build-comparative-release/autoruntime_comparative_benchmark
   --output autoruntime.jsonl
 ```
 
-联合 4 MiB case：
+联合 4 MiB、100 Hz 容量压力 case：
 
 ```bash
 projects/autoruntime/build-comparative-release/autoruntime_comparative_benchmark \
@@ -146,6 +146,17 @@ projects/autoruntime/build-comparative-release/autoruntime_comparative_benchmark
   --frequency 100 --duration-ms 3000 --warmup 20 --trials 3 \
   --domain 188 --run-id <同一运行编号> \
   --output autoruntime-4m.jsonl
+```
+
+为了把稳态延迟与过载积压分开，同一 4 MiB payload 还要执行 25 Hz、12000 ms。两组每个 trial 都安排 300 条消息，不能用减少样本数换取成功状态：
+
+```bash
+projects/autoruntime/build-comparative-release/autoruntime_comparative_benchmark \
+  --mode fastipc-copy --mode fastipc-loan --mode dds \
+  --payload 4194304 \
+  --frequency 25 --duration-ms 12000 --warmup 20 --trials 3 \
+  --domain 191 --run-id <同一运行编号> \
+  --output autoruntime-4m-25hz.jsonl
 ```
 
 ## 构建 rclcpp + Cyclone DDS 基线
@@ -181,6 +192,16 @@ ROS_DOMAIN_ID=187 \
   --output rclcpp.jsonl
 ```
 
+## 2026-08-21 正式结果
+
+[同机统一对比基准结果](comparative-benchmark-results.md) 固定到实现提交 `d25967384beb0c01bb47bbdb689220b9a0cee25e`，并保存六份带 SHA-256 的原始 JSONL：
+
+- 默认 100 Hz：FastIPC copy/loan 24/24 trial 完整成功，rclcpp DDS 12/12 完整成功；AutoRuntime DDS 11/12 完整成功，1 MiB 有一次只完成 294/300；
+- 4 MiB、25 Hz：四条路径 12/12 trial 均完成 300/300；
+- 4 MiB、100 Hz：FastIPC copy/loan 6/6 完成；AutoRuntime DDS 与 rclcpp DDS 均 0/3 完整成功，失败、丢失与秒级积压延迟原样保留。
+
+报告只把 25 Hz 全成功组当作 4 MiB 稳态比较；100 Hz 组是容量压力证据。失败组的 latency 只覆盖已返回响应，不能与无丢失组作简单速度比。
+
 ## 当前环境差异与解释边界
 
 本地 AutoRuntime 固定 Cyclone DDS 11.0.1；Jazzy binary package 当前提供 Cyclone DDS 0.10.5 与 `rmw_cyclonedds_cpp` 2.2.3。两条 DDS 路径使用同一 DDS 家族，但不是同一版本，也不是同一 public API。
@@ -203,8 +224,8 @@ README 或简历只能引用同时满足以下条件的数据：
 - Release binary 的 `source_revision` 等于已提交实现；
 - environment 与所有 result 原始 JSONL 均已保存并有 SHA-256；
 - 四个默认 payload、全部 mode、三个 trial 都存在；
-- 4 MiB 联合实验单独完整保存；
-- 无 failed/missing trial；
+- 4 MiB 的稳态组与压力组分别完整保存；
+- 不删除 failed/missing trial；发生失败时必须报告 exact counter，并禁止从该组发布无条件 latency/speedup 结论；
 - 报告列出机器、容器、DDS/RMW 版本和已知混杂变量；
 - 结论同时展示不利结果，不只挑最快 payload。
 
@@ -215,6 +236,8 @@ smoke test 数字只证明 runner 可用，不进入性能结论。Debug、sanit
 - 同机 AutoRuntime FastIPC copy/loan 与 DDS 双进程 runner：已实现；
 - rclcpp + Cyclone DDS 双进程 runner：已实现；
 - 64 B、1 KiB、64 KiB、1 MiB full-touch：已实现；
-- 4 MiB AutoRuntime 联合实验：已实现 runner 支持，正式结果随固定提交证据记录；
+- 4 MiB 联合实验：25 Hz 稳态和 100 Hz 压力结果均已固定并保留失败 trial；
+- 同机正式结果、方法、哈希与解释边界：[comparative-benchmark-results.md](comparative-benchmark-results.md)；
+- 实际 DRAM memory bandwidth：**INCOMPLETE**；当前只记录 logical payload bandwidth；
 - 跨主机 AutoRuntime DDS vs rclcpp DDS：**INCOMPLETE**，由第 9 项完成；
 - iceoryx/rclcpp loaned-message baseline：不在本实验范围，不得用缺失数据填零。

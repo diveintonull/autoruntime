@@ -96,6 +96,8 @@
 | `31b2107` | close/unmap lifetime fix 与真实 post-restart message proof |
 | `fc8150d` | 轻依赖默认 build；DDS 仍为已验证的 opt-in |
 | `b2bc5c6` | DDS topic-based Request/Response、correlation/failure matrix 与 JSONL benchmark |
+| `7af5297` | transport-neutral loan API、FastIPC callback-scoped loan、统一双进程对比 runner 与 rclcpp baseline |
+| `d259673` | rclcpp responder fork 后 exec 新地址空间，修复连续 case 的 RMW 生命周期继承 |
 
 ## 次要参考
 

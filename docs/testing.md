@@ -2,13 +2,13 @@
 
 日期：2026-08-21
 
-提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新一轮证据固定到 DDS Request/Response 实现提交，不把偶发通过写成稳定通过。
+提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新一轮完整矩阵固定到 loaned IPC/rclcpp 生命周期修复提交，不把偶发通过写成稳定通过。
 
 ## 已验证 revision 与 host
 
 | 字段 | 值 |
 | --- | --- |
-| 当前实现 revision | `b2bc5c6b051736999fc53a5f2db98376e7dd9750` |
+| 当前实现 revision | `d25967384beb0c01bb47bbdb689220b9a0cee25e` |
 | Host | WSL2 下 Ubuntu 24.04.4 |
 | Kernel | `6.6.87.2-microsoft-standard-WSL2` |
 | Architecture | x86_64 |
@@ -21,16 +21,18 @@
 
 | Profile | 配置 | 结果 | 原始日志 |
 | --- | --- | ---: | --- |
-| Default | FastIPC，DDS OFF | 35/35 | [日志](evidence/test-default-b2bc5c6.log) |
-| Debug | FastIPC + Cyclone DDS | 42/42 | [日志](evidence/test-debug-b2bc5c6.log) |
-| Release | FastIPC + Cyclone DDS + benchmark smoke | 43/43 | [日志](evidence/test-release-b2bc5c6.log) |
-| ASan | DDS ON，address + leak check | 42/42 | [日志](evidence/test-asan-b2bc5c6.log) |
-| UBSan | DDS ON，首个 UB 即停止 | 42/42 | [日志](evidence/test-ubsan-b2bc5c6.log) |
-| TSan 当前完整一次 | DDS ON，首个 race 即停止 | 42/42 | [日志](evidence/test-tsan-b2bc5c6.log) |
+| Default | FastIPC，DDS OFF | 41/41 | [日志](evidence/test-default-d259673.log) |
+| Debug | FastIPC + Cyclone DDS | 46/46 | [日志](evidence/test-debug-d259673.log) |
+| Release | FastIPC + Cyclone DDS + benchmark smoke | 50/50 | [日志](evidence/test-release-d259673.log) |
+| ASan | DDS ON，address + leak check | 46/46 | [日志](evidence/test-asan-d259673.log) |
+| UBSan | DDS ON，首个 UB 即停止 | 46/46 | [日志](evidence/test-ubsan-d259673.log) |
+| TSan 当前完整一次 | DDS ON，首个 race 即停止；使用 `setarch` 启动 wrapper | 46/46 | [日志](evidence/test-tsan-d259673.log) |
 | TSan DDS RPC 重复 | aggregate RPC test，连续 20 次 | 20/20 次通过 | [日志](evidence/test-tsan-dds-rpc-repeat20-b2bc5c6.log) |
 | 历史 TSan DDS 重复 | participant-loss，`until-fail:100` | 第 1 次通过，第 2 次失败 | [失败日志](evidence/test-tsan-dds-race-9af83ee3be0c.log) |
 
-当前实现的完整 DDS TSan 为 42/42，DDS RPC aggregate test 在 TSan 下连续 20 次通过；但完整 DDS TSan 总体状态仍是 **INCOMPLETE**，不能用当前一次通过抹掉已复现的历史外部竞态。历史失败堆栈位于外部 `libddsc.so.11`：Cyclone DDS 的 SPDP 更新线程释放 buffer 时，另一内部线程仍在 `sendmsg`。当前结果隔离了 DDS RPC 增量，却不能替代 Cyclone DDS 上游修复、升级验证或更长时间 soak。
+六份当前日志的 SHA-256 依次为：Default `ba477ee5ccec86d0d550aea12566998b3b2d22c880a6d030546dfee7ecefcd5e`、Debug `810b925b81841d602435d8be6d856ba8462608894c931f9872c2334e042e658e`、Release `34d8e99bc92fc71447c09e3d64c2abf66d483351905da9a76491503d25ce061d`、ASan `9542a9124027144f926471a1b8e112f66442be4003f4bef233df080388d11d54`、UBSan `260c544aeb8fdf1ae684af282890f4420bd8f8bd1b0b73ef2500e67eb1037f79`、TSan `dc251b8e6e0db64ace0235530f82b229dc38a4f02c537f42e50715ffc335d40f`。
+
+当前实现的完整 DDS TSan 为 46/46，DDS RPC aggregate test 在 TSan 下连续 20 次通过；但完整 DDS TSan 总体状态仍是 **INCOMPLETE**，不能用当前一次通过抹掉已复现的历史外部竞态。历史失败堆栈位于外部 `libddsc.so.11`：Cyclone DDS 的 SPDP 更新线程释放 buffer 时，另一内部线程仍在 `sendmsg`。当前结果隔离了项目增量，却不能替代 Cyclone DDS 上游修复、升级验证或更长时间 soak。
 
 ## 轻依赖默认构建
 
@@ -46,7 +48,7 @@ ctest --test-dir projects/autoruntime/build-verify-default \
   --output-on-failure
 ```
 
-当前注册 35 个测试，其中 23 个带 `fault` label、4 个带 `realtime` label、5 个带 `record_replay` label。
+当前注册 41 个测试，其中 24 个带 `fault` label、4 个带 `realtime` label、5 个带 `record_replay` label、3 个带 `zero_copy` label、2 个带 `comparative` label。
 
 ## 完整 DDS 与 sanitizer 命令
 
@@ -72,6 +74,12 @@ bash projects/autoruntime/scripts/run_test_matrix.sh tsan
 - [timeout/late-response correlation 连续 50 次](evidence/test-dds-rpc-timeout-repeat50-b2bc5c6.log)，均未把迟到响应误配给后续请求；
 - [TSan aggregate RPC test 连续 20 次](evidence/test-tsan-dds-rpc-repeat20-b2bc5c6.log) 全部通过；
 - [正式 Release JSONL](evidence/dds-rpc-2026-08-21-b2bc5c6.jsonl) 的 SHA-256 为 `a91f0ab37aabfe4ffd1f6d6cd2b550175abbaa4a9da78cd64d3597ea66221213`：9000/9000 次调用成功，三类错误计数均为 0。完整方法、分位数和解释边界见 [DDS RPC 基准](dds-rpc-benchmark.md)。
+
+## 统一对比基准证据
+
+loaned FastIPC adapter、AutoRuntime 双进程 runner 与可选 rclcpp baseline 固定在 `7af52971199d744cd9468d614c831516ff72e9ec`；连续 case 的 rclcpp responder 在 fork 后改为 exec 新地址空间，修复固定在 `d25967384beb0c01bb47bbdb689220b9a0cee25e`。容器内连续三 case CTest 为 1/1，当前 AutoRuntime 六 profile 结果见上表。
+
+[正式结果报告](comparative-benchmark-results.md) 保存默认 64 B 至 1 MiB、4 MiB 25 Hz 稳态和 4 MiB 100 Hz 压力三组实验，以及六份原始 JSONL 的 SHA-256。默认 AutoRuntime DDS 有 1 个失败 trial，4 MiB 100 Hz 的两条 DDS 路径全部过载失败；这些结果没有被删除或重跑覆盖。报告只从无丢失的组得出稳态观测结论，跨主机比较与硬件 DRAM bandwidth 明确为 **INCOMPLETE**。
 
 ## Record/Replay 证据
 
@@ -118,7 +126,7 @@ wrapper 只处理 virtual-address collision，不过滤 race 或 deadlock report
 - [UBSan](evidence/test-ubsan-0c0935c63b40.log)
 - [TSan](evidence/test-tsan-0c0935c63b40.log)
 
-这些日志不能替代当前 DDS RPC 增量后的 35/42/43-test 结果。
+这些日志不能替代当前 loaned IPC 与统一对比增量后的 41/46/50-test 结果。
 
 ## 持续集成
 
