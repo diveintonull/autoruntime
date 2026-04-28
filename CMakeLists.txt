@@ -142,6 +142,30 @@ if(AUTORUNTIME_ENABLE_DDS)
   target_compile_definitions(autoruntime PUBLIC AUTORUNTIME_HAS_DDS=1)
 endif()
 
+if(UNIX)
+  add_library(autoruntime_cross_machine_support STATIC
+    stability/cross_machine_stability.cpp)
+  target_include_directories(
+    autoruntime_cross_machine_support PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/stability")
+  target_link_libraries(autoruntime_cross_machine_support
+    PUBLIC AutoRuntime::autoruntime)
+  autoruntime_enable_warnings(autoruntime_cross_machine_support)
+endif()
+
+if(UNIX AND AUTORUNTIME_ENABLE_DDS)
+  add_executable(autoruntime_cross_machine_stability
+    stability/cross_machine_main.cpp)
+  target_link_libraries(autoruntime_cross_machine_stability
+    PRIVATE autoruntime_cross_machine_support Threads::Threads)
+  target_compile_definitions(
+    autoruntime_cross_machine_stability PRIVATE
+    AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}"
+    AUTORUNTIME_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    AUTORUNTIME_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+  autoruntime_enable_warnings(autoruntime_cross_machine_stability)
+endif()
+
 if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
   add_executable(autoruntime_executor_test tests/executor_test.cpp)
   target_link_libraries(autoruntime_executor_test
@@ -293,6 +317,29 @@ if(BUILD_TESTING AND AUTORUNTIME_BUILD_TESTS)
     add_test(NAME autoruntime.distributed
       COMMAND autoruntime_distributed_test)
     set_tests_properties(autoruntime.distributed PROPERTIES TIMEOUT 20)
+
+    add_executable(autoruntime_cross_machine_stability_test
+      tests/cross_machine_stability_test.cpp)
+    target_link_libraries(autoruntime_cross_machine_stability_test
+      PRIVATE autoruntime_cross_machine_support Threads::Threads)
+    autoruntime_enable_warnings(
+      autoruntime_cross_machine_stability_test)
+    add_test(NAME autoruntime.cross_machine.tracker
+      COMMAND autoruntime_cross_machine_stability_test)
+
+    if(AUTORUNTIME_ENABLE_DDS)
+      add_test(NAME autoruntime.cross_machine.namespace_smoke
+        COMMAND bash
+          ${CMAKE_CURRENT_SOURCE_DIR}/scripts/run_cross_machine_stability.sh
+          --binary $<TARGET_FILE:autoruntime_cross_machine_stability>
+          --output-dir ${CMAKE_CURRENT_BINARY_DIR}/cross-machine-smoke
+          --minimum-duration-ms 5000
+          --warmup-ms 2000
+          --phase-ms 700
+          --domain-id 73)
+      set_tests_properties(autoruntime.cross_machine.namespace_smoke
+        PROPERTIES TIMEOUT 45 RUN_SERIAL TRUE LABELS "cross_machine;fault;dds")
+    endif()
 
     add_executable(autoruntime_fault_injection_test
       tests/fault_injection_test.cpp)

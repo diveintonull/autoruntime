@@ -16,6 +16,7 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 | 可观测性 | counter、gauge、bounded histogram、JSON log、trace span、E2E latency、CPU/RSS/context-switch snapshot |
 | Record/Replay | versioned little-endian trace、CRC32、bounded async recorder、strict/continue failure policy、原速/加速/最快/单步重放 |
 | 分布式切片 | 带 bounded membership 与 lease expiry 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
+| 跨机稳定性 | 双 rootless 网络命名空间模拟 Machine A Sensor+Planning 与 Machine B Control+Monitor；真实 DDS/UDP/TCP 数据面；延迟、断链、重连、peer crash/restart 与 generation 恢复 |
 | 对比基准 | 两进程 request/echo；FastIPC copy/loan、AutoRuntime DDS、可选 rclcpp + DDS；full-touch、exact counter、P50/P95/P99/P99.9/MAX、CPU/context switch/RSS |
 | 验证 | 固定提交 `d25967384beb`：轻依赖 41/41；DDS Debug/ASan/UBSan/TSan 各 46/46；Release 50/50；DDS RPC TSan aggregate 连续 20 次通过；历史外部 Cyclone 竞态仍使完整 DDS TSan 状态为 **INCOMPLETE** |
 
@@ -99,6 +100,7 @@ projects/autoruntime/build-verify-release/autoruntime_comparative_benchmark
 - [FastIPC 零复制集成](docs/zero-copy-integration.md)
 - [统一对比基准方法与边界](docs/benchmark.md)
 - [统一对比基准正式结果](docs/comparative-benchmark-results.md)
+- [跨机稳定性与故障恢复](docs/cross-machine-stability.md)
 - [故障注入矩阵](docs/fault-injection.md)
 - [恢复设计与 crash test](docs/recovery.md)
 
@@ -116,7 +118,7 @@ projects/autoruntime/build-verify-release/autoruntime_comparative_benchmark
 
 - `HealthMonitor` 提供 policy 与 recovery hook，不是 privileged process supervisor 或 deployment daemon。
 - FastIPC adapter 只实现 pub/sub，但同机路径已支持 copy 与 callback-scoped loan；service 仍返回 `Unsupported`。Cyclone DDS adapter 支持私有 topic-based Request/Response v1，但不兼容 OMG DDS-RPC 或 ROS 2 service wire protocol，也不支持 DDS loan。
-- DDS RPC 不自动 retry、去重或提供 exactly-once；missing service 到 deadline 返回 `Timeout`，这不能证明 remote node 已死。当前仅验证同机两个真实 participant，跨主机证据仍为 **INCOMPLETE**。
+- DDS RPC 不自动 retry、去重或提供 exactly-once；missing service 到 deadline 返回 `Timeout`，这不能证明 remote node 已死。当前已验证两个隔离 Linux 网络命名空间，真实双物理机、跨交换机和 WAN 证据仍为 **INCOMPLETE**。
 - `Executor::Stop(Deadline)` 会请求 cooperative stop 并 join 所有 worker，但尚未执行传入的 deadline。忽略 stop token 的 callback 可无限拖延 shutdown。
 - task priority 只决定 callback group 内已排队 job 的顺序；worker 的 CPU affinity 与可选 `SCHED_FIFO` 是另一层配置，仍不提供 callback 抢占、准入控制或 WCET 证明。
 - 实时配置当前只覆盖 Executor scheduler 与 callback-group worker；FastIPC/DDS receiver、HealthMonitor、Discovery、RPC 线程尚未纳入。普通用户请求 `SCHED_FIFO` 时通常因 `EPERM` 回退，实际状态可查询。

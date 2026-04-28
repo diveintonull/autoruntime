@@ -62,6 +62,7 @@
 | Health evaluation 与 recovery hook | `health/`、`docs/recovery.md` |
 | metric、JSON log、span、E2E latency、CPU metric | `observability/`、benchmark evidence |
 | Bounded UDP discovery 与 framed TCP RPC | `distributed/`、distributed test |
+| 双网络命名空间跨机稳定性与故障恢复 runner | `stability/`、`scripts/run_cross_machine_stability.sh`、tracker 与 namespace CTest |
 | 20 个命名 runtime fault case | `tests/fault_injection_test.cpp`、`docs/fault-injection.md` |
 | 五种 profile 的 sanitizer/build matrix 与根 CI | script、workflow、`docs/testing.md` |
 
