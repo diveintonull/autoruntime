@@ -46,7 +46,8 @@ while (( $# > 0 )); do
   esac
 done
 
-if [[ ! -x "$binary" || -z "$output_root" ||
+if [[ ! -r /proc/uptime ||
+      ! -x "$binary" || -z "$output_root" ||
       ! "$minimum_duration_ms" =~ ^[0-9]+$ ||
       ! "$warmup_ms" =~ ^[0-9]+$ ||
       ! "$phase_ms" =~ ^[0-9]+$ ||
@@ -100,11 +101,17 @@ sleep_milliseconds() {
   sleep "$seconds"
 }
 
+monotonic_milliseconds() {
+  awk '{printf "%.0f\n", $1 * 1000}' /proc/uptime
+}
+
 log_phase() {
   local phase="$1"
+  local monotonic_ms
+  monotonic_ms="$(monotonic_milliseconds)"
   printf \
-    '{"schema_version":1,"record_type":"phase","phase":"%s","generation":%d,"wall_time_ns":%s}\n' \
-    "$phase" "$generation" "$(date +%s%N)" >>"$orchestrator_log"
+    '{"schema_version":1,"record_type":"phase","phase":"%s","generation":%d,"monotonic_ms":%s,"wall_time_ns":%s}\n' \
+    "$phase" "$generation" "$monotonic_ms" "$(date +%s%N)" >>"$orchestrator_log"
 }
 
 wait_ready() {
@@ -175,7 +182,7 @@ start_machine_b() {
 }
 
 printf \
-  '{"schema_version":1,"record_type":"environment","runner":"autoruntime_cross_machine_orchestrator","topology":"two_rootless_network_namespaces","machine_a":"10.88.0.2","machine_b":"10.88.0.3","minimum_duration_ms":%d,"warmup_ms":%d,"phase_ms":%d,"domain_id":%d}\n' \
+  '{"schema_version":1,"record_type":"environment","runner":"autoruntime_cross_machine_orchestrator","topology":"two_rootless_network_namespaces","duration_clock":"proc_uptime_monotonic_ms","machine_a":"10.88.0.2","machine_b":"10.88.0.3","minimum_duration_ms":%d,"warmup_ms":%d,"phase_ms":%d,"domain_id":%d}\n' \
   "$minimum_duration_ms" "$warmup_ms" "$phase_ms" "$domain_id" \
   >"$orchestrator_log"
 
@@ -205,7 +212,7 @@ start_machine_a
 log_phase warmup
 sleep_milliseconds "$warmup_ms"
 
-started_ns="$(date +%s%N)"
+fault_started_ms="$(monotonic_milliseconds)"
 while kill -0 "$machine_b_process" 2>/dev/null; do
   log_phase network_delay
   nsenter -t "$machine_a_holder" -n \
@@ -237,12 +244,13 @@ while kill -0 "$machine_b_process" 2>/dev/null; do
   log_phase peer_restart
   sleep_milliseconds "$warmup_ms"
 
-  current_ns="$(date +%s%N)"
-  elapsed_ms=$(((current_ns - started_ns) / 1000000))
+  current_ms="$(monotonic_milliseconds)"
+  elapsed_ms=$((current_ms - fault_started_ms))
   if (( elapsed_ms >= minimum_duration_ms )); then
     break
   fi
 done
+actual_fault_duration_ms=$(( $(monotonic_milliseconds) - fault_started_ms ))
 
 log_phase final_verification
 sleep_milliseconds "$warmup_ms"
@@ -261,7 +269,8 @@ machine_a_status=$?
 set -e
 machine_a_process=""
 
-if (( machine_a_status == 0 && machine_b_status == 0 )); then
+if (( machine_a_status == 0 && machine_b_status == 0 &&
+      actual_fault_duration_ms >= minimum_duration_ms )); then
   final_status="passed"
   final_exit=0
 else
@@ -269,8 +278,9 @@ else
   final_exit=1
 fi
 printf \
-  '{"schema_version":1,"record_type":"summary","status":"%s","machine_a_exit":%d,"machine_b_exit":%d,"run_directory":"%s"}\n' \
+  '{"schema_version":1,"record_type":"summary","status":"%s","machine_a_exit":%d,"machine_b_exit":%d,"requested_fault_duration_ms":%d,"actual_fault_duration_ms":%d,"run_directory":"%s"}\n' \
   "$final_status" "$machine_a_status" "$machine_b_status" \
+  "$minimum_duration_ms" "$actual_fault_duration_ms" \
   "$run_directory" >>"$orchestrator_log"
 
 echo "cross_machine_run_directory=$run_directory"

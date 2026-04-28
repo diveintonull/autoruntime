@@ -41,6 +41,8 @@ Sensor payload 固定为 sequence 与按位取反值，DDS envelope 同时携带
 
 短 smoke 至少执行一个完整循环；长时测试重复循环直到达到 minimum-duration-ms。每次 A 重启都写入独立 JSONL，避免覆盖 crash 前证据。
 
+持续时间门使用 /proc/uptime 的单调毫秒值，不使用可能被宿主校时调整的 wall clock。orchestrator summary 同时写 requested_fault_duration_ms 与 actual_fault_duration_ms，并把实际值小于请求值视为失败；完整故障循环可能让实际值略微超出请求值。
+
 ## 健康状态与通过条件
 
 NetworkHealthState 是跨机观测状态，不替代进程内 HealthMonitor：
