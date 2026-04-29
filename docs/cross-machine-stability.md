@@ -95,13 +95,43 @@ JSONL 还记录 observation count、DDS message/loss/duplicate、RPC 分类、bo
 
 | 阶段 | 当前状态 | 说明 |
 | --- | --- | --- |
-| 自动 namespace smoke | PASS | Debug 开发构建已完成真实 delay/disconnect/reconnect/crash/restart；正式矩阵结果在 testing.md 更新 |
-| 30 分钟 | **INCOMPLETE** | 等待固定 implementation commit 后正式运行 |
+| 自动 namespace smoke | PASS | 固定提交 `3ee9b10b34be` 的 Debug、Release、ASan、UBSan 均通过；TSan 复现外部 Cyclone DDS race，保持 **INCOMPLETE** |
+| 30 分钟 | PASS | 单调故障时长 1,804,670 ms；Machine B steady 时长 1,808,936.816 ms |
 | 2 小时 | **INCOMPLETE** | 尚未运行 |
 | Overnight | **INCOMPLETE** | 尚未运行 |
 | 双物理机 | **INCOMPLETE** | 当前环境只有单 host 双隔离网络栈 |
 
 报告只把实际运行过的阶段标为 PASS。任何 sanitizer、解析、负载、最终 health 或 runner exit 失败都保留原始证据并标为失败，不通过重跑覆盖。
+
+## 30 分钟正式结果
+
+固定实现为 `3ee9b10b34be0462990d7a37b065ebf5dbbf9c08`，Release/GNU 13.3.0、Cyclone DDS 11.0.1、domain 76。完整结果：
+
+| 指标 | 结果 |
+| --- | ---: |
+| 完整 fault cycle | 366 |
+| Machine A 最终 generation | 367 |
+| Machine B observation | 31,414 |
+| discovery loss / recovery | 732 / 733 |
+| peer generation change | 366 |
+| RPC success / timeout / transport error | 20,239 / 1,079 / 1,903 |
+| DDS message / stall observation / sequence loss | 70,173 / 8,467 / 7,262 |
+| health transition / recovery | 2,366 / 733 |
+| RPC unexpected / parse error | 0 / 0 |
+| DDS duplicate / payload error | 0 / 0 |
+| baseline / final P99 | 120,456.087 / 120,391.635 µs |
+| P99 drift | -64.452 µs |
+| 最终状态 | `RUNNING` |
+
+每个 cycle 都包含 delay、disconnect、reconnect、DDS peer disappear 和 generation restart。message loss 是 BestEffort 在主动断链下的预期 availability 观测；payload、duplicate、unexpected RPC 与 parse error 才是 correctness gate。
+
+机器可读摘要见 [summary JSON](evidence/cross-machine-30m-2026-08-21-3ee9b10-summary.json)，完整 369 个 JSONL 文件见 [压缩归档](evidence/cross-machine-30m-2026-08-21-3ee9b10.tar.gz)。归档为 320,819 bytes，SHA-256 是 `c2ad1b96ab1bdde9d545f415976a59d65a7494e9a2c538baeeeedb746c3da304`；从归档反解的 Machine B 与 orchestrator SHA-256 分别为 `03f8c79ac8083ad4d40f1709c4cb42000e9185ddaa31bafe64b51a0534d0a05b` 与 `df1822b39a9dd9b4721fd1224b1ff9a2ca34dca4d70f80c1f801094235c6512f`。
+
+## 被拒绝的前置运行
+
+实现提交 `d4af64199e1a` 的第一次脚本运行虽然退出 0，但 Machine B steady 时长只有 1,747,461.983 ms，未达到请求的 1,800,000 ms，因此明确拒绝为 **INCOMPLETE**。根因是编排曾用 realtime wall clock 计时，WSL/宿主校时跳变让循环提前结束。
+
+修复提交 `3ee9b10b34be` 改用 /proc/uptime 单调毫秒，并把 requested/actual 写入 summary 与 pass gate。被拒绝运行的关键文件和 canonical tar-stream hash 保留在 summary JSON 中，不能用后续通过覆盖这一发现。
 
 ## 解释限制
 

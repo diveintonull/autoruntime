@@ -18,7 +18,7 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 | 分布式切片 | 带 bounded membership 与 lease expiry 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
 | 跨机稳定性 | 双 rootless 网络命名空间模拟 Machine A Sensor+Planning 与 Machine B Control+Monitor；真实 DDS/UDP/TCP 数据面；延迟、断链、重连、peer crash/restart 与 generation 恢复 |
 | 对比基准 | 两进程 request/echo；FastIPC copy/loan、AutoRuntime DDS、可选 rclcpp + DDS；full-touch、exact counter、P50/P95/P99/P99.9/MAX、CPU/context switch/RSS |
-| 验证 | 固定提交 `d25967384beb`：轻依赖 41/41；DDS Debug/ASan/UBSan/TSan 各 46/46；Release 50/50；DDS RPC TSan aggregate 连续 20 次通过；历史外部 Cyclone 竞态仍使完整 DDS TSan 状态为 **INCOMPLETE** |
+| 验证 | 固定提交 `3ee9b10b34be`：轻依赖 42/42；DDS Debug/ASan/UBSan 各 48/48；Release 52/52；30 分钟跨机 fault soak PASS；TSan 47/48，外部 Cyclone DDS race 保持 **INCOMPLETE** |
 
 ## 架构
 
@@ -50,7 +50,7 @@ cmake --build projects/autoruntime/build
 ctest --test-dir projects/autoruntime/build --output-on-failure
 ```
 
-DDS 默认为关闭，因此上述命令只需要 CMake、Ninja、C++20 compiler、pthreads 和相邻 FastIPC 项目。当前轻依赖构建注册 41 个测试，并通过 41/41。
+DDS 默认为关闭，因此上述命令只需要 CMake、Ninja、C++20 compiler、pthreads 和相邻 FastIPC 项目。当前轻依赖构建注册 42 个测试，并通过 42/42。
 
 运行 sensor -> planning -> control 示例：
 
@@ -67,7 +67,7 @@ projects/autoruntime/scripts/bootstrap_cyclonedds.sh
 projects/autoruntime/scripts/run_test_matrix.sh all
 ```
 
-矩阵明确设置 `AUTORUNTIME_ENABLE_DDS=ON`，并运行 Debug、Release、ASan、UBSan、TSan。固定 revision 的日志与 WSL2 TSan 启动说明见 [testing.md](docs/testing.md)。当前提交的完整 DDS TSan 为 46/46，DDS RPC aggregate test 连续 20 次通过；但历史上重复 participant-loss 已复现 Cyclone DDS 11.0.1 库内 SPDP 竞态。该失败没有被过滤，完整 DDS TSan 总体状态仍为 **INCOMPLETE**。
+矩阵明确设置 `AUTORUNTIME_ENABLE_DDS=ON`，并运行 Debug、Release、ASan、UBSan、TSan。固定 revision 的日志与 WSL2 TSan 启动说明见 [testing.md](docs/testing.md)。Debug、Release、ASan 与 UBSan 全部通过；TSan 的项目 tracker 通过，但 namespace churn 稳定复现 Cyclone DDS 11.0.1 `libddsc.so.11` 内部竞态，因此为 47/48 并保持 **INCOMPLETE**。该报告没有被过滤或 suppress。
 
 ## 实验与证据
 

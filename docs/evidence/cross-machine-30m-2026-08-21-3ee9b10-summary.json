@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "source_revision": "3ee9b10b34be0462990d7a37b065ebf5dbbf9c08",
+  "date": "2026-08-21",
+  "environment": {
+    "host": "WSL2 Ubuntu 24.04.4",
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "architecture": "x86_64",
+    "compiler": "GNU 13.3.0",
+    "build_type": "Release",
+    "cyclonedds": "11.0.1",
+    "topology": "two_rootless_network_namespaces",
+    "machine_a": "10.88.0.2 Sensor+Planning",
+    "machine_b": "10.88.0.3 Control+Monitor",
+    "domain_id": 76
+  },
+  "duration": {
+    "clock": "proc_uptime_monotonic_ms",
+    "requested_fault_duration_ms": 1800000,
+    "actual_fault_duration_ms": 1804670,
+    "machine_b_steady_duration_ms": 1808936.815915
+  },
+  "fault_cycles": {
+    "network_delay": 366,
+    "network_disconnect": 366,
+    "network_reconnect": 366,
+    "dds_peer_disappear": 366,
+    "peer_restart": 366,
+    "final_generation": 367
+  },
+  "machine_b": {
+    "final_state": "RUNNING",
+    "observation_count": 31414,
+    "discovery_failures": 8193,
+    "discovery_loss_events": 732,
+    "discovery_recovery_events": 733,
+    "peer_generation_changes": 366,
+    "rpc_successes": 20239,
+    "rpc_timeouts": 1079,
+    "rpc_transport_errors": 1903,
+    "rpc_unexpected_errors": 0,
+    "rpc_parse_errors": 0,
+    "dds_messages": 70173,
+    "dds_stall_observations": 8467,
+    "message_loss": 7262,
+    "duplicate_messages": 0,
+    "payload_errors": 0,
+    "health_transitions": 2366,
+    "recovery_count": 733,
+    "latency_samples": 20239,
+    "retained_latency_samples": 1024,
+    "baseline_p99_us": 120456.087,
+    "final_p99_us": 120391.635,
+    "p99_drift_us": -64.452
+  },
+  "artifact": {
+    "archive": "cross-machine-30m-2026-08-21-3ee9b10.tar.gz",
+    "archive_sha256": "c2ad1b96ab1bdde9d545f415976a59d65a7494e9a2c538baeeeedb746c3da304",
+    "archive_bytes": 320819,
+    "archive_entry_count": 370,
+    "raw_json_file_count": 369,
+    "raw_total_lines": 37820,
+    "raw_apparent_bytes": 6710825,
+    "canonical_tar_stream_sha256": "5f56206bdd969be317ba9716abf6cbfc5ab4562f9d0f02ac89aeca88199a1322",
+    "machine_b_jsonl_sha256": "03f8c79ac8083ad4d40f1709c4cb42000e9185ddaa31bafe64b51a0534d0a05b",
+    "orchestrator_jsonl_sha256": "df1822b39a9dd9b4721fd1224b1ff9a2ca34dca4d70f80c1f801094235c6512f"
+  },
+  "rejected_pre_fix_attempt": {
+    "source_revision": "d4af64199e1a0326ed9a20fe9213fa30c092faa4",
+    "status": "incomplete_duration",
+    "requested_duration_ms": 1800000,
+    "machine_b_actual_duration_ms": 1747461.982781,
+    "reason": "wall_clock_jump_caused_early_completion",
+    "machine_b_jsonl_sha256": "3122eaae4c5fc841f095d1c674985e017acb97c0c8d15de4b448c4d4b75b6cc1",
+    "orchestrator_jsonl_sha256": "8220d9532b5dd340814b26a1721bad94b50bec2c251aa9bb1f76665b5d199aeb",
+    "canonical_tar_stream_sha256": "0d02d00523fb1f1b25facc174f51e7034678bf64388854dc87fc1359c4ac3723"
+  },
+  "incomplete_stages": [
+    "2h",
+    "overnight",
+    "physical_two_machine"
+  ]
+}

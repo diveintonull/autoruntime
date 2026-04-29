@@ -99,6 +99,8 @@
 | `b2bc5c6` | DDS topic-based Request/Response、correlation/failure matrix 与 JSONL benchmark |
 | `7af5297` | transport-neutral loan API、FastIPC callback-scoped loan、统一双进程对比 runner 与 rclcpp baseline |
 | `d259673` | rclcpp responder fork 后 exec 新地址空间，修复连续 case 的 RMW 生命周期继承 |
+| `d4af641` | 真实双 network namespace / DDS / UDP / TCP 稳定性 runner、有限状态跟踪与反复故障恢复 |
+| `3ee9b10` | 使用单调时钟约束 soak 时长，并拒收墙钟跳变导致不足 30 分钟的证据 |
 
 ## 次要参考
 

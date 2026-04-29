@@ -2,13 +2,13 @@
 
 日期：2026-08-21
 
-提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新一轮完整矩阵固定到 loaned IPC/rclcpp 生命周期修复提交，不把偶发通过写成稳定通过。
+提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新一轮完整矩阵与 30 分钟跨机证据固定到单调时钟修复提交，不把偶发通过或未达时长写成通过。
 
 ## 已验证 revision 与 host
 
 | 字段 | 值 |
 | --- | --- |
-| 当前实现 revision | `d25967384beb0c01bb47bbdb689220b9a0cee25e` |
+| 当前实现 revision | `3ee9b10b34be0462990d7a37b065ebf5dbbf9c08` |
 | Host | WSL2 下 Ubuntu 24.04.4 |
 | Kernel | `6.6.87.2-microsoft-standard-WSL2` |
 | Architecture | x86_64 |
@@ -21,18 +21,26 @@
 
 | Profile | 配置 | 结果 | 原始日志 |
 | --- | --- | ---: | --- |
-| Default | FastIPC，DDS OFF | 41/41 | [日志](evidence/test-default-d259673.log) |
-| Debug | FastIPC + Cyclone DDS | 46/46 | [日志](evidence/test-debug-d259673.log) |
-| Release | FastIPC + Cyclone DDS + benchmark smoke | 50/50 | [日志](evidence/test-release-d259673.log) |
-| ASan | DDS ON，address + leak check | 46/46 | [日志](evidence/test-asan-d259673.log) |
-| UBSan | DDS ON，首个 UB 即停止 | 46/46 | [日志](evidence/test-ubsan-d259673.log) |
-| TSan 当前完整一次 | DDS ON，首个 race 即停止；使用 `setarch` 启动 wrapper | 46/46 | [日志](evidence/test-tsan-d259673.log) |
+| Default | FastIPC，DDS OFF | 42/42 | [日志](evidence/test-default-3ee9b10.log) |
+| Debug | FastIPC + Cyclone DDS | 48/48 | [日志](evidence/test-debug-3ee9b10.log) |
+| Release | FastIPC + Cyclone DDS + benchmark smoke | 52/52 | [日志](evidence/test-release-3ee9b10.log) |
+| ASan | DDS ON，address + leak check | 48/48 | [日志](evidence/test-asan-3ee9b10.log) |
+| UBSan | DDS ON，首个 UB 即停止 | 48/48 | [日志](evidence/test-ubsan-3ee9b10.log) |
+| TSan 当前完整一次 | DDS ON，首个 race 即停止；使用 `setarch` 启动 wrapper | 47/48，**INCOMPLETE** | [失败日志](evidence/test-tsan-3ee9b10.log) |
 | TSan DDS RPC 重复 | aggregate RPC test，连续 20 次 | 20/20 次通过 | [日志](evidence/test-tsan-dds-rpc-repeat20-b2bc5c6.log) |
 | 历史 TSan DDS 重复 | participant-loss，`until-fail:100` | 第 1 次通过，第 2 次失败 | [失败日志](evidence/test-tsan-dds-race-9af83ee3be0c.log) |
 
-六份当前日志的 SHA-256 依次为：Default `ba477ee5ccec86d0d550aea12566998b3b2d22c880a6d030546dfee7ecefcd5e`、Debug `810b925b81841d602435d8be6d856ba8462608894c931f9872c2334e042e658e`、Release `34d8e99bc92fc71447c09e3d64c2abf66d483351905da9a76491503d25ce061d`、ASan `9542a9124027144f926471a1b8e112f66442be4003f4bef233df080388d11d54`、UBSan `260c544aeb8fdf1ae684af282890f4420bd8f8bd1b0b73ef2500e67eb1037f79`、TSan `dc251b8e6e0db64ace0235530f82b229dc38a4f02c537f42e50715ffc335d40f`。
+六份当前日志的 SHA-256 依次为：Default `aab644bb3895163a78b826f7799750897eb4eca15f1c9ba52585a761abfdb56e`、Debug `98eac20b6535227298702d472c380962a7b0189d998eaa3d9ac319e10d57e9b2`、Release `5f124d00165277f02051beb7923796c1bb7e9e6e9a63d8153ac4a8d46772d3ba`、ASan `5e08ef7ad267f029de3c8c18584e986af82ff70ef544009f1f678e539c03572f`、UBSan `17373b7c7175cae796a381b4b3b6feb92d7d9577ba8ed93803630d9f69b39b50`、TSan `0401e6bcea0f080cb92c7406e1a5b2738666d35a0f14fa377d8c9a2aa319f10d`。
 
-当前实现的完整 DDS TSan 为 46/46，DDS RPC aggregate test 在 TSan 下连续 20 次通过；但完整 DDS TSan 总体状态仍是 **INCOMPLETE**，不能用当前一次通过抹掉已复现的历史外部竞态。历史失败堆栈位于外部 `libddsc.so.11`：Cyclone DDS 的 SPDP 更新线程释放 buffer 时，另一内部线程仍在 `sendmsg`。当前结果隔离了项目增量，却不能替代 Cyclone DDS 上游修复、升级验证或更长时间 soak。
+当前 TSan 的项目自有 cross-machine tracker、DDS RPC 与其他 46 个 case 通过；namespace churn 在 Machine A participant 创建阶段稳定报告外部 `libddsc.so.11` 的 `ddsrt_mutex_lock` race，因此全矩阵为 47/48。失败未 suppress，外部 Cyclone DDS 也未伪装成按 TSan 重建；必须经上游修复或升级验证后才能关闭 **INCOMPLETE**。
+
+## 跨机稳定性证据
+
+固定 Release runner 在两个 rootless network namespace 中运行 30 分钟：orchestrator 单调故障时长 1,804,670 ms，Machine B steady 时长 1,808,936.816 ms。366 个完整 cycle 均包含 20 ms delay、disconnect、reconnect、DDS peer disappear 与 generation restart；最终 generation 367，Machine B 回到 `RUNNING`。
+
+31,414 次 probe 观察到 732 次 discovery loss、733 次 recovery、1,079 次 RPC timeout、1,903 次 transport error、8,467 次 DDS stall 与 7,262 条 BestEffort sequence loss；unexpected RPC、RPC parse、DDS duplicate 和 payload error 均为 0。完整方法见 [跨机稳定性](cross-machine-stability.md)，机器摘要与 369 个原始 JSONL 见 [summary](evidence/cross-machine-30m-2026-08-21-3ee9b10-summary.json) 和 [archive](evidence/cross-machine-30m-2026-08-21-3ee9b10.tar.gz)。
+
+第一次前置运行因 wall clock 跳变只达到 1,747,461.983 ms，即使脚本退出 0 也被拒绝为 **INCOMPLETE**；随后改用 /proc/uptime 单调时钟并重新跑满。2 小时、overnight 与双物理机阶段仍为 **INCOMPLETE**。
 
 ## 轻依赖默认构建
 
@@ -48,7 +56,7 @@ ctest --test-dir projects/autoruntime/build-verify-default \
   --output-on-failure
 ```
 
-当前注册 41 个测试，其中 24 个带 `fault` label、4 个带 `realtime` label、5 个带 `record_replay` label、3 个带 `zero_copy` label、2 个带 `comparative` label。
+当前注册 42 个测试，其中 24 个带 `fault` label、4 个带 `realtime` label、5 个带 `record_replay` label、3 个带 `zero_copy` label、2 个带 `comparative` label；跨机 tracker 在 DDS OFF 时仍验证有界状态机。
 
 ## 完整 DDS 与 sanitizer 命令
 
