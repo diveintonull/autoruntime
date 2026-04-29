@@ -413,6 +413,18 @@ if(AUTORUNTIME_BUILD_BENCHMARKS AND AUTORUNTIME_ENABLE_DDS)
 endif()
 
 if(AUTORUNTIME_BUILD_BENCHMARKS AND UNIX)
+  add_executable(autoruntime_membership_lease_benchmark
+    benchmarks/membership_lease_benchmark.cpp)
+  target_link_libraries(autoruntime_membership_lease_benchmark
+    PRIVATE AutoRuntime::autoruntime Threads::Threads)
+  target_compile_definitions(
+    autoruntime_membership_lease_benchmark PRIVATE
+    AUTORUNTIME_SOURCE_REVISION="${AUTORUNTIME_SOURCE_REVISION}"
+    AUTORUNTIME_COMPILER="${CMAKE_CXX_COMPILER_ID}-${CMAKE_CXX_COMPILER_VERSION}"
+    AUTORUNTIME_BUILD_TYPE="${CMAKE_BUILD_TYPE}")
+  autoruntime_enable_warnings(
+    autoruntime_membership_lease_benchmark)
+
   add_executable(autoruntime_realtime_scheduling_benchmark
     benchmarks/realtime_scheduling_benchmark.cpp)
   target_link_libraries(autoruntime_realtime_scheduling_benchmark

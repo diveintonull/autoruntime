@@ -6,7 +6,7 @@ AutoRuntime 的 distributed module 有意限制范围。它只提供让小型 au
 
 Linux 实现有两条独立路径：
 
-- `DiscoveryService`：向显式 bounded peer list 发送 UDP heartbeat announcement，维护 generation-aware membership 和 lease expiry。
+- `DiscoveryService`：向显式 bounded peer list 发送 UDP heartbeat announcement，维护 generation-aware membership、lease expiry 与过期后的有限 generation fence。
 - `RpcServer` / `RpcClient`：one-request-per-connection TCP RPC，带 versioned frame、request correlation、bounded method/payload size、deadline、cancellation 与 typed status response。
 
 explicit peer list 是 deployment seed list。node 可在运行时加入 peer，但 `max_peers` 与 `max_members` 都由配置固定。没有 unbounded gossip state、leader election、consensus 或 durable service registry。
@@ -23,7 +23,9 @@ explicit peer list 是 deployment seed list。node 可在运行时加入 peer，
 | heartbeat sequence | 拒绝 duplicate/replayed announcement |
 | RPC IPv4 address + port | 定位 member control endpoint |
 
-receiver 用自己的 monotonic clock 为已接受 announcement 加 timestamp，绝不跨 host 比较 clock。更高 generation 替换 current record；更低 generation 属于 stale，不能刷新 lease。同 generation 下 non-increasing sequence 属于 duplicate，也不能刷新 lease。record 在 `lease_timeout` 后移除。
+receiver 用自己的 monotonic clock 为已接受 announcement 加 timestamp，绝不跨 host 比较 clock。更高 generation 替换 current record；更低 generation 属于 stale，不能刷新 lease。同 generation 下 non-increasing sequence 属于 duplicate，也不能刷新 lease。record 在 `lease_timeout` 后从 active map 移除，并在 `generation_fence_timeout` 内保留最高 generation fence。
+
+fence 拒绝小于等于已过期 generation 的 announcement，但不延长自身寿命；更高 generation 可立即加入。fence 数量受 `max_generation_fences` 限制，超限淘汰最早到期项。详细状态机和永久性边界见 [成员管理、心跳与租约设计](membership-lease.md)。
 
 capacity exhaustion、stale/duplicate packet、parse error、send failure 和 expired member 都计入 `DiscoveryStats`。
 
@@ -55,7 +57,7 @@ client 使用 nonblocking connect/send/receive，并以短间隔 poll，让 `Dea
 4. supervisor 启动 generation `N + 1`；
 5. 新 process 用相同 node id、更高 generation 广播；
 6. peer 替换旧 record，并重连 advertised RPC endpoint；
-7. stale generation `N` packet 不能刷新或覆盖 generation `N + 1`。
+7. generation `N + 1` 后续 lease 到期时形成 fence，延迟的 generation `N` packet 在有限窗口内也不能复活。
 
 Discovery 只提供 endpoint membership；`HealthMonitor` 拥有 recovery policy。分离二者避免把 process supervision 塞进 wire protocol。
 
@@ -64,6 +66,9 @@ Discovery 只提供 endpoint membership；`HealthMonitor` 拥有 recovery policy
 `tests/distributed_test.cpp` 使用真实 UDP/TCP socket，验证：
 
 - generation 1 -> 2 replacement，并拒绝继续到来的 generation 1 heartbeat；
+- generation 2 lease 到期后，持续发送的 generation 1 不能在 fence window 内复活；
+- generation 3 可立即越过旧 fence；
+- bounded fence capacity、eviction 与单调到期；
 - bounded membership 与可观察 capacity drop；
 - lease expiry；
 - parent 与 fork 出的 planning process 之间 discovery；
@@ -71,10 +76,12 @@ Discovery 只提供 endpoint membership；`HealthMonitor` 拥有 recovery policy
 - `SIGKILL` 后 membership expiry；
 - RPC timeout、pre-request cancellation、missing-method status。
 
-该测试只在 Unix 启用，CTest timeout 为 20 s；记录的 WSL2 环境中正常约 0.5 s 完成。
+该测试只在 Unix 启用，CTest timeout 为 20 s；加入 fence 生命周期覆盖后，记录的 WSL2 环境中正常约 1.4 s 完成。
 
 ## 安全与部署边界
 
 协议当前没有 authentication、encryption、authorization，除 generation/sequence check 外也没有 anti-spoofing。必须限制在 trusted network namespace 或受保护 network segment，不能把端口暴露给不可信网络。hostile-network deployment 前必须加入 TLS 或 mutual authentication、identity provisioning、rate limit 与 source allow-list。
 
 目前只接受 numeric IPv4 address。NAT traversal、IPv6、multicast auto-join、任意 subnet routing、persistence 与 split-brain resolution 均不在范围内。
+
+generation fence 也不是持久身份数据库：窗口到期、容量 eviction 或 observer 重启后会遗忘旧 generation。部署必须保证同一 logical node 重启时 generation 严格增加。

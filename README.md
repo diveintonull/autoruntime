@@ -82,6 +82,7 @@ projects/autoruntime/build-verify-release/autoruntime_record_replay_experiment
 projects/autoruntime/build-verify-release/autoruntime_dds_qos_experiment
 projects/autoruntime/build-verify-release/autoruntime_dds_rpc_benchmark
 projects/autoruntime/build-verify-release/autoruntime_comparative_benchmark
+projects/autoruntime/build-verify-release/autoruntime_membership_lease_benchmark
 ```
 
 测量结果与原始 JSON：
@@ -101,6 +102,7 @@ projects/autoruntime/build-verify-release/autoruntime_comparative_benchmark
 - [统一对比基准方法与边界](docs/benchmark.md)
 - [统一对比基准正式结果](docs/comparative-benchmark-results.md)
 - [跨机稳定性与故障恢复](docs/cross-machine-stability.md)
+- [成员管理、心跳与租约设计/实验](docs/membership-lease.md)
 - [故障注入矩阵](docs/fault-injection.md)
 - [恢复设计与 crash test](docs/recovery.md)
 
@@ -122,7 +124,7 @@ projects/autoruntime/build-verify-release/autoruntime_comparative_benchmark
 - `Executor::Stop(Deadline)` 会请求 cooperative stop 并 join 所有 worker，但尚未执行传入的 deadline。忽略 stop token 的 callback 可无限拖延 shutdown。
 - task priority 只决定 callback group 内已排队 job 的顺序；worker 的 CPU affinity 与可选 `SCHED_FIFO` 是另一层配置，仍不提供 callback 抢占、准入控制或 WCET 证明。
 - 实时配置当前只覆盖 Executor scheduler 与 callback-group worker；FastIPC/DDS receiver、HealthMonitor、Discovery、RPC 线程尚未纳入。普通用户请求 `SCHED_FIFO` 时通常因 `EPERM` 回退，实际状态可查询。
-- discovery 与 RPC 只支持 numeric IPv4 endpoint 和 explicit peer，不提供 authentication、encryption、consensus、NAT traversal 或 Byzantine protection。
+- discovery 与 RPC 只支持 numeric IPv4 endpoint 和 explicit peer，不提供 authentication、encryption、consensus、NAT traversal 或 Byzantine protection。generation fence 只有有限时间/容量且不持久化；它不是永久身份库，也不需要为当前单 coordinator 拓扑增加 Raft/leader election。
 - trace 与 histogram store 位于进程内，只在文档明确处有上界；没有 OpenTelemetry exporter 或 durable metrics backend。
 - Record/Replay 当前只记录 pub/sub publish attempt，不记录 receive、delivery result 或 service/RPC；Recorder 会复制 payload 并竞争入队锁，尚未与 FastIPC loan 打通。
 - trace 的 CRC32 用于损坏检测，不提供认证或抗恶意篡改；当前也没有 rotation、index、compression 或跨版本 schema migration。

@@ -165,16 +165,66 @@ Status SetNonBlocking(int descriptor) {
 }  // namespace
 
 struct DiscoveryService::Impl {
+  struct GenerationFence {
+    std::uint64_t generation{0U};
+    Deadline::TimePoint expires_at{};
+  };
+
   DiscoveryConfig config;
   NetworkEndpoint local_endpoint;
   int socket{-1};
   mutable std::mutex mutex;
   std::vector<NetworkEndpoint> peers;
   std::unordered_map<std::string, MemberRecord> members;
+  std::unordered_map<std::string, GenerationFence> generation_fences;
   DiscoveryStats stats;
   std::uint64_t next_sequence{1U};
   std::atomic<bool> running{false};
   std::jthread worker;
+
+  void ExpireGenerationFencesLocked(
+      Deadline::TimePoint observed_at) {
+    for (auto iterator = generation_fences.begin();
+         iterator != generation_fences.end();) {
+      if (observed_at >= iterator->second.expires_at) {
+        iterator = generation_fences.erase(iterator);
+        ++stats.generation_fences_expired;
+      } else {
+        ++iterator;
+      }
+    }
+  }
+
+  void RememberGenerationFenceLocked(
+      const MemberRecord& member, Deadline::TimePoint observed_at) {
+    const auto existing = generation_fences.find(member.node_id);
+    if (existing != generation_fences.end()) {
+      existing->second.generation =
+          std::max(existing->second.generation, member.generation);
+      existing->second.expires_at =
+          observed_at + config.generation_fence_timeout;
+      return;
+    }
+
+    if (generation_fences.size() >= config.max_generation_fences) {
+      const auto oldest = std::min_element(
+          generation_fences.begin(), generation_fences.end(),
+          [](const auto& left, const auto& right) {
+            return left.second.expires_at < right.second.expires_at;
+          });
+      if (oldest != generation_fences.end()) {
+        generation_fences.erase(oldest);
+        ++stats.generation_fence_evictions;
+      }
+    }
+
+    generation_fences.emplace(
+        member.node_id,
+        GenerationFence{
+            member.generation,
+            observed_at + config.generation_fence_timeout});
+    ++stats.generation_fences_created;
+  }
 
   void SendAnnouncement() {
     std::vector<NetworkEndpoint> current_peers;
@@ -216,8 +266,16 @@ struct DiscoveryService::Impl {
     }
     std::lock_guard lock(mutex);
     ++stats.announcements_received;
+    ExpireGenerationFencesLocked(observed_at);
     const auto iterator = members.find(announcement.node_id);
     if (iterator == members.end()) {
+      const auto fence = generation_fences.find(announcement.node_id);
+      if (fence != generation_fences.end() &&
+          announcement.generation <= fence->second.generation) {
+        ++stats.stale_announcements;
+        ++stats.generation_fence_rejections;
+        return;
+      }
       if (members.size() >= config.max_members) {
         ++stats.capacity_drops;
         return;
@@ -229,6 +287,9 @@ struct DiscoveryService::Impl {
                        announcement.sequence,
                        announcement.rpc_endpoint,
                        observed_at});
+      if (fence != generation_fences.end()) {
+        generation_fences.erase(fence);
+      }
       return;
     }
 
@@ -277,9 +338,11 @@ struct DiscoveryService::Impl {
 
   void ExpireMembers(Deadline::TimePoint observed_at) {
     std::lock_guard lock(mutex);
+    ExpireGenerationFencesLocked(observed_at);
     for (auto iterator = members.begin(); iterator != members.end();) {
       if (observed_at - iterator->second.last_seen >
           config.lease_timeout) {
+        RememberGenerationFenceLocked(iterator->second, observed_at);
         iterator = members.erase(iterator);
         ++stats.expired_members;
       } else {
@@ -333,7 +396,9 @@ Result<std::unique_ptr<DiscoveryService>> DiscoveryService::Create(
           kMaximumIdentityBytes ||
       config.heartbeat_period <= std::chrono::milliseconds::zero() ||
       config.lease_timeout <= config.heartbeat_period ||
+      config.generation_fence_timeout < config.lease_timeout ||
       config.max_members == 0U || config.max_peers == 0U ||
+      config.max_generation_fences == 0U ||
       config.peers.size() > config.max_peers) {
     return Status(StatusCode::InvalidArgument,
                   "invalid discovery configuration");

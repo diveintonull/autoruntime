@@ -102,6 +102,131 @@ int GenerationCapacityAndLeaseAreBounded() {
   return 0;
 }
 
+int ExpiredGenerationCannotResurrectWithinFenceWindow() {
+  auto supervisor_config =
+      DiscoveryConfig("fence-supervisor", 1U, 120ms);
+  supervisor_config.generation_fence_timeout = 500ms;
+  supervisor_config.max_generation_fences = 4U;
+  auto supervisor = Take(
+      autoruntime::DiscoveryService::Create(supervisor_config));
+  CHECK(supervisor->Start());
+
+  auto current = Take(
+      autoruntime::DiscoveryService::Create(
+          DiscoveryConfig("planning-fenced", 2U, 120ms)));
+  CHECK(current->AddPeer(supervisor->LocalEndpoint()));
+  CHECK(current->Start());
+  CHECK(WaitUntil(
+      [&] {
+        const auto member = supervisor->Find("planning-fenced");
+        return member && member.value().generation == 2U;
+      },
+      1s));
+
+  auto stale = Take(
+      autoruntime::DiscoveryService::Create(
+          DiscoveryConfig("planning-fenced", 1U, 120ms)));
+  CHECK(stale->AddPeer(supervisor->LocalEndpoint()));
+  CHECK(stale->Start());
+  CHECK(WaitUntil(
+      [&] { return supervisor->Stats().stale_announcements > 0U; },
+      1s));
+
+  CHECK(current->Stop());
+  CHECK(WaitUntil(
+      [&] { return supervisor->Stats().expired_members >= 1U; },
+      1s));
+  const auto stale_before =
+      supervisor->Stats().stale_announcements;
+  std::this_thread::sleep_for(100ms);
+  CHECK(!supervisor->Find("planning-fenced"));
+  const auto fenced_stats = supervisor->Stats();
+  CHECK(fenced_stats.generation_fences_created >= 1U);
+  CHECK(fenced_stats.generation_fence_rejections > 0U);
+  CHECK(fenced_stats.stale_announcements > stale_before);
+
+  auto restarted = Take(
+      autoruntime::DiscoveryService::Create(
+          DiscoveryConfig("planning-fenced", 3U, 120ms)));
+  CHECK(restarted->AddPeer(supervisor->LocalEndpoint()));
+  CHECK(restarted->Start());
+  CHECK(WaitUntil(
+      [&] {
+        const auto member = supervisor->Find("planning-fenced");
+        return member && member.value().generation == 3U;
+      },
+      1s));
+
+  CHECK(stale->Stop());
+  CHECK(restarted->Stop());
+  CHECK(supervisor->Stop());
+  return 0;
+}
+
+int GenerationFenceStateIsBoundedAndExpires() {
+  auto invalid_timeout =
+      DiscoveryConfig("invalid-fence-timeout", 1U, 120ms);
+  invalid_timeout.generation_fence_timeout = 100ms;
+  const auto timeout_result =
+      autoruntime::DiscoveryService::Create(invalid_timeout);
+  CHECK(!timeout_result);
+  CHECK(timeout_result.status().code() ==
+        autoruntime::StatusCode::InvalidArgument);
+
+  auto invalid_capacity =
+      DiscoveryConfig("invalid-fence-capacity", 1U, 120ms);
+  invalid_capacity.max_generation_fences = 0U;
+  const auto capacity_result =
+      autoruntime::DiscoveryService::Create(invalid_capacity);
+  CHECK(!capacity_result);
+  CHECK(capacity_result.status().code() ==
+        autoruntime::StatusCode::InvalidArgument);
+
+  auto supervisor_config =
+      DiscoveryConfig("bounded-fence-supervisor", 1U, 80ms);
+  supervisor_config.generation_fence_timeout = 500ms;
+  supervisor_config.max_generation_fences = 1U;
+  auto supervisor = Take(
+      autoruntime::DiscoveryService::Create(supervisor_config));
+  CHECK(supervisor->Start());
+
+  auto first = Take(
+      autoruntime::DiscoveryService::Create(
+          DiscoveryConfig("fenced-first", 2U, 80ms)));
+  CHECK(first->AddPeer(supervisor->LocalEndpoint()));
+  CHECK(first->Start());
+  CHECK(WaitUntil(
+      [&] { return supervisor->Find("fenced-first").ok(); }, 1s));
+  CHECK(first->Stop());
+  CHECK(WaitUntil(
+      [&] { return supervisor->Stats().expired_members >= 1U; },
+      1s));
+
+  auto second = Take(
+      autoruntime::DiscoveryService::Create(
+          DiscoveryConfig("fenced-second", 2U, 80ms)));
+  CHECK(second->AddPeer(supervisor->LocalEndpoint()));
+  CHECK(second->Start());
+  CHECK(WaitUntil(
+      [&] { return supervisor->Find("fenced-second").ok(); }, 1s));
+  CHECK(second->Stop());
+  CHECK(WaitUntil(
+      [&] { return supervisor->Stats().expired_members >= 2U; },
+      1s));
+
+  const auto bounded_stats = supervisor->Stats();
+  CHECK(bounded_stats.generation_fences_created >= 2U);
+  CHECK(bounded_stats.generation_fence_evictions >= 1U);
+  CHECK(WaitUntil(
+      [&] {
+        return supervisor->Stats().generation_fences_expired >= 1U;
+      },
+      1s));
+
+  CHECK(supervisor->Stop());
+  return 0;
+}
+
 struct ChildGuard {
   pid_t process{-1};
 
@@ -304,6 +429,15 @@ int RpcDeadlineCancellationAndMissingMethod() {
 
 int main() {
   if (const int result = GenerationCapacityAndLeaseAreBounded();
+      result != 0) {
+    return result;
+  }
+  if (const int result =
+          ExpiredGenerationCannotResurrectWithinFenceWindow();
+      result != 0) {
+    return result;
+  }
+  if (const int result = GenerationFenceStateIsBoundedAndExpires();
       result != 0) {
     return result;
   }

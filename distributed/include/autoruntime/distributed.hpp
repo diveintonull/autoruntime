@@ -38,7 +38,11 @@ struct DiscoveryStats {
   std::uint64_t parse_errors{0U};
   std::uint64_t stale_announcements{0U};
   std::uint64_t duplicate_announcements{0U};
+  std::uint64_t generation_fence_rejections{0U};
   std::uint64_t expired_members{0U};
+  std::uint64_t generation_fences_created{0U};
+  std::uint64_t generation_fences_expired{0U};
+  std::uint64_t generation_fence_evictions{0U};
   std::uint64_t capacity_drops{0U};
   std::uint64_t send_failures{0U};
 };
@@ -51,8 +55,10 @@ struct DiscoveryConfig {
   std::vector<NetworkEndpoint> peers;
   std::chrono::milliseconds heartbeat_period{100};
   std::chrono::milliseconds lease_timeout{500};
+  std::chrono::milliseconds generation_fence_timeout{5000};
   std::size_t max_members{32U};
   std::size_t max_peers{16U};
+  std::size_t max_generation_fences{64U};
 };
 
 class DiscoveryService {
