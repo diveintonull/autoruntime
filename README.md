@@ -15,10 +15,10 @@ AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/
 | 恢复 | heartbeat、progress、backlog、deadline miss、process exit evaluation；generation-aware cleanup/start/reconnect hook |
 | 可观测性 | counter、gauge、bounded histogram、JSON log、trace span、E2E latency、CPU/RSS/context-switch snapshot |
 | Record/Replay | versioned little-endian trace、CRC32、bounded async recorder、strict/continue failure policy、原速/加速/最快/单步重放 |
-| 分布式切片 | 带 bounded membership 与 lease expiry 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
+| 分布式切片 | 带 bounded membership、lease expiry 与 post-expiry generation fence 的 explicit-peer UDP discovery；带 framing、deadline 和 cancellation 的 TCP RPC |
 | 跨机稳定性 | 双 rootless 网络命名空间模拟 Machine A Sensor+Planning 与 Machine B Control+Monitor；真实 DDS/UDP/TCP 数据面；延迟、断链、重连、peer crash/restart 与 generation 恢复 |
 | 对比基准 | 两进程 request/echo；FastIPC copy/loan、AutoRuntime DDS、可选 rclcpp + DDS；full-touch、exact counter、P50/P95/P99/P99.9/MAX、CPU/context switch/RSS |
-| 验证 | 固定提交 `3ee9b10b34be`：轻依赖 42/42；DDS Debug/ASan/UBSan 各 48/48；Release 52/52；30 分钟跨机 fault soak PASS；TSan 47/48，外部 Cyclone DDS race 保持 **INCOMPLETE** |
+| 验证 | 最新矩阵固定 `150696446623`：轻依赖 42/42；DDS Debug/ASan/UBSan 各 48/48；Release 52/52；TSan 47/48，外部 Cyclone DDS race 保持 **INCOMPLETE**。30 分钟跨机 fault soak 固定 `3ee9b10b34be` 并 PASS |
 
 ## 架构
 

@@ -101,7 +101,18 @@ generation 必须由 deployment/supervisor 在同一 logical node 每次重启�
 
 输出包含 lease detection 与 restart discovery 的 P50/P95/P99/P99.9/MAX，以及进程 CPU、上下文切换和 peak RSS。它衡量的是本机 loopback 控制面路径，不代表真实交换机、跨主机时钟、丢包网络或生产硬件。
 
-正式结果必须固定到实现提交后重新生成；未提交工作树上的开发 smoke 不写入性能结论。
+正式结果固定到实现提交 `15069644662325dafb40791090df3cf1415c0be7`。环境为 WSL2 Ubuntu 24.04.4、GNU 13.3.0 Release、IPv4 loopback；100 轮结果如下：
+
+| 指标 | P50 | P95 | P99 | P99.9 / MAX |
+| --- | ---: | ---: | ---: | ---: |
+| Stop 返回到 lease 检测（µs） | 50,856.230 | 60,298.717 | 60,835.893 | 60,855.283 |
+| 更高 generation 启动到重新发现（µs） | 1,086.776 | 1,113.630 | 1,138.220 | 1,189.445 |
+
+100 个 member 全部到期并创建 fence，旧 generation 被拒绝 234 次；unexpected resurrection 为 0。wall time 9.430 s，进程 CPU 1.198%，voluntary/involuntary context switch 8,162/0，peak RSS 3,932,160 bytes。
+
+[原始 JSON](evidence/membership-lease-2026-08-21-1506964.json) 的 SHA-256 为 `d0fe10ac140032d2ccd0f289c21c3ac012f3f0dae69c76d6663c2e2c71d1fb13`。
+
+结果解释：60 ms lease 的检测分布由最后一次有效 heartbeat 相位、10 ms worker poll 和 scheduler jitter 共同决定，因此 P50 约 50.9 ms、MAX 约 60.9 ms；这不是低于 lease 的“提前误判”证明。restart discovery 是本机 loopback 结果，不应外推到交换机或跨主机网络。
 
 ## 验证
 
@@ -114,7 +125,7 @@ generation 必须由 deployment/supervisor 在同一 logical node 每次重启�
 - fence timeout 小于 lease 或 capacity 为 0 时配置被拒绝；
 - 既有 generation replacement、bounded membership、fork/SIGKILL、lease expiry 与 RPC failure 测试继续通过。
 
-实现后的完整 case 已连续运行 10 次通过；正式 sanitizer 矩阵和固定 revision benchmark 证据在实现提交后生成。
+固定提交的 Release 完整 case 连续运行 20 次通过；Default 42/42、Debug 48/48、Release 52/52、ASan 48/48、UBSan 48/48。TSan 中本测试通过，完整矩阵因外部 Cyclone DDS race 为 47/48，保持 **INCOMPLETE**。
 
 ## 明确限制
 

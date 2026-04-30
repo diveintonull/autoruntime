@@ -101,6 +101,7 @@
 | `d259673` | rclcpp responder fork 后 exec 新地址空间，修复连续 case 的 RMW 生命周期继承 |
 | `d4af641` | 真实双 network namespace / DDS / UDP / TCP 稳定性 runner、有限状态跟踪与反复故障恢复 |
 | `3ee9b10` | 使用单调时钟约束 soak 时长，并拒收墙钟跳变导致不足 30 分钟的证据 |
+| `1506964` | lease 到期后的有界 generation fence、旧实例复活故障测试与控制面恢复 benchmark |
 
 ## 次要参考
 

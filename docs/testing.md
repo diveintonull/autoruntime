@@ -2,13 +2,13 @@
 
 日期：2026-08-21
 
-提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新一轮完整矩阵与 30 分钟跨机证据固定到单调时钟修复提交，不把偶发通过或未达时长写成通过。
+提交身份改写导致较早证据目录中的旧 ID 与当前历史不同；对照见 [提交身份改写映射](../../../COMMIT_IDENTITY_MAP.md)。本页最新六 profile 与 membership/lease 证据固定到 `1506964`，30 分钟跨机证据仍固定到 `3ee9b10`；不同 revision 分开记录，不把偶发通过或未达时长写成通过。
 
 ## 已验证 revision 与 host
 
 | 字段 | 值 |
 | --- | --- |
-| 当前实现 revision | `3ee9b10b34be0462990d7a37b065ebf5dbbf9c08` |
+| 当前测试 revision | `15069644662325dafb40791090df3cf1415c0be7` |
 | Host | WSL2 下 Ubuntu 24.04.4 |
 | Kernel | `6.6.87.2-microsoft-standard-WSL2` |
 | Architecture | x86_64 |
@@ -21,18 +21,33 @@
 
 | Profile | 配置 | 结果 | 原始日志 |
 | --- | --- | ---: | --- |
-| Default | FastIPC，DDS OFF | 42/42 | [日志](evidence/test-default-3ee9b10.log) |
-| Debug | FastIPC + Cyclone DDS | 48/48 | [日志](evidence/test-debug-3ee9b10.log) |
-| Release | FastIPC + Cyclone DDS + benchmark smoke | 52/52 | [日志](evidence/test-release-3ee9b10.log) |
-| ASan | DDS ON，address + leak check | 48/48 | [日志](evidence/test-asan-3ee9b10.log) |
-| UBSan | DDS ON，首个 UB 即停止 | 48/48 | [日志](evidence/test-ubsan-3ee9b10.log) |
-| TSan 当前完整一次 | DDS ON，首个 race 即停止；使用 `setarch` 启动 wrapper | 47/48，**INCOMPLETE** | [失败日志](evidence/test-tsan-3ee9b10.log) |
+| Default | FastIPC，DDS OFF | 42/42 | [日志](evidence/test-default-1506964.log) |
+| Debug | FastIPC + Cyclone DDS | 48/48 | [日志](evidence/test-debug-1506964.log) |
+| Release | FastIPC + Cyclone DDS + benchmark smoke | 52/52 | [日志](evidence/test-release-1506964.log) |
+| ASan | DDS ON，address + leak check | 48/48 | [日志](evidence/test-asan-1506964.log) |
+| UBSan | DDS ON，首个 UB 即停止 | 48/48 | [日志](evidence/test-ubsan-1506964.log) |
+| TSan 当前完整一次 | DDS ON，首个 race 即停止；使用 `setarch` 启动 wrapper | 47/48，**INCOMPLETE** | [失败日志](evidence/test-tsan-1506964.log) |
 | TSan DDS RPC 重复 | aggregate RPC test，连续 20 次 | 20/20 次通过 | [日志](evidence/test-tsan-dds-rpc-repeat20-b2bc5c6.log) |
 | 历史 TSan DDS 重复 | participant-loss，`until-fail:100` | 第 1 次通过，第 2 次失败 | [失败日志](evidence/test-tsan-dds-race-9af83ee3be0c.log) |
 
-六份当前日志的 SHA-256 依次为：Default `aab644bb3895163a78b826f7799750897eb4eca15f1c9ba52585a761abfdb56e`、Debug `98eac20b6535227298702d472c380962a7b0189d998eaa3d9ac319e10d57e9b2`、Release `5f124d00165277f02051beb7923796c1bb7e9e6e9a63d8153ac4a8d46772d3ba`、ASan `5e08ef7ad267f029de3c8c18584e986af82ff70ef544009f1f678e539c03572f`、UBSan `17373b7c7175cae796a381b4b3b6feb92d7d9577ba8ed93803630d9f69b39b50`、TSan `0401e6bcea0f080cb92c7406e1a5b2738666d35a0f14fa377d8c9a2aa319f10d`。
+六份当前日志的 SHA-256 依次为：Default `e3322fe026ec0d34fd5474715c6d9790e29f9a6822cbe155643914da193200ed`、Debug `51bccfa03519b4d34e7efe5cae5d5af58a3499cd59b8c83cd34009258559afce`、Release `08141fc3e52bbf8c5e1d1afafb716726284ce855c61dc13c863bf46fcc11b960`、ASan `cae6f8680be36fc044f745271c96f313e186aef839ed6083c96880f41b0c48f2`、UBSan `4f16efeed4c6ea4af31ea956b860179dbc26f797126c04402dba39fd582f2da0`、TSan `00347665e3ccdeeed266226be5fcda0226231bbb370ef898ee18d9adf04c9b8e`。
 
-当前 TSan 的项目自有 cross-machine tracker、DDS RPC 与其他 46 个 case 通过；namespace churn 在 Machine A participant 创建阶段稳定报告外部 `libddsc.so.11` 的 `ddsrt_mutex_lock` race，因此全矩阵为 47/48。失败未 suppress，外部 Cyclone DDS 也未伪装成按 TSan 重建；必须经上游修复或升级验证后才能关闭 **INCOMPLETE**。
+当前 TSan 的 `autoruntime.distributed`、项目自有 cross-machine tracker、DDS RPC 与其他 45 个 case 通过；namespace churn 在 Machine A participant 创建阶段报告外部 `libddsc.so.11` 的 `ddsrt_mutex_lock` race，因此全矩阵为 47/48。失败未 suppress，外部 Cyclone DDS 也未伪装成按 TSan 重建；必须经上游修复或升级验证后才能关闭 **INCOMPLETE**。
+
+## 成员管理、心跳与租约证据
+
+固定实现提交 `15069644662325dafb40791090df3cf1415c0be7`。Release 集成测试连续 20 次通过；完整六 profile 中 `autoruntime.distributed` 全部通过，TSan 的唯一失败位于外部 DDS namespace churn，不在 membership 路径。
+
+100 轮正式实验使用 WSL2 单机 IPv4 loopback、GNU 13.3.0 Release、10 ms heartbeat、60 ms lease 与 500 ms generation fence：
+
+| 指标 | P50 | P95 | P99 | P99.9 / MAX |
+| --- | ---: | ---: | ---: | ---: |
+| Stop 返回到 lease 检测（µs） | 50,856.230 | 60,298.717 | 60,835.893 | 60,855.283 |
+| 更高 generation 启动到重新发现（µs） | 1,086.776 | 1,113.630 | 1,138.220 | 1,189.445 |
+
+100 个 active member 全部到期并创建 fence，持续发送的旧 generation 被拒绝 234 次，最终 generation 为 102。实验耗时 9.430 s，进程 CPU 利用率 1.198%，voluntary/involuntary context switch 为 8,162/0，peak RSS 为 3,932,160 bytes。
+
+[原始 JSON](evidence/membership-lease-2026-08-21-1506964.json) SHA-256 为 `d0fe10ac140032d2ccd0f289c21c3ac012f3f0dae69c76d6663c2e2c71d1fb13`。这是控制面 loopback 观测，不代表物理跨机延迟，也不证明 lease 是完美 failure detector。
 
 ## 跨机稳定性证据
 
