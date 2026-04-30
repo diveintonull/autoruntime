@@ -2,8 +2,6 @@
 
 AutoRuntime 是面向 Linux 的 C++20 机器人运行时，基于 [eclipse-ecal/tcp_pubsub](https://github.com/eclipse-ecal/tcp_pubsub) 深度派生。项目保留固定的上游历史和 MIT 声明，同时用 transport-neutral runtime、明确的调度策略、健康监督、可观测性和有限 distributed control-plane primitive 替换面向应用的原有架构。
 
-AutoRuntime 当前尚未经过生产环境认证，已验证范围以本仓库记录的测试矩阵、benchmark 与稳定性证据为准。
-
 ## 已实现能力
 
 | 领域 | 当前行为 |
